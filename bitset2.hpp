@@ -21,7 +21,6 @@
 #include "detail/array_funcs.hpp"
 #include "detail/array_add.hpp"
 #include "detail/array_ops.hpp"
-#include "detail/array_add.hpp"
 #include "detail/bitset2_impl.hpp"
 
 #include <bitset>
@@ -473,7 +472,7 @@ namespace std
     {
       using argument_type= Bitset2::bitset2<N>;
       using result_type=   std::size_t;
-      
+
       result_type operator()( argument_type const& bs ) const
       {
 //        return m_func( std::bitset<N>( bs ) );
@@ -482,7 +481,7 @@ namespace std
     private:
       enum : size_t
       { n_array= Bitset2::detail::bitset2_impl<N>::n_array };
-      
+
       Bitset2::detail::hash_impl<n_array>   m_func;
 //       std::hash<std::bitset<N> >  m_func;
     }; // struct hash
