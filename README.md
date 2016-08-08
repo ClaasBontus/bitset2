@@ -5,7 +5,7 @@ following extentions/changes. Focus was set on having as many functions
 implemented as [constexpr](http://en.cppreference.com/w/cpp/language/constexpr)
 as possible.
 * Copy and move constructors are specified constexpr.
-* Additional constexpr constructor `bitset2( std::array const & )`.
+* Additional constexpr constructor `bitset2( std::array<ULLONG,N> const & )`.
 * Conversion from and to `std::bitset`.
 * Operators implemented as constexpr are `~`, `==`, `!=`, `|`, `&`, `^`, `<<` (shift left), `>>` (shift right), `[]` (bit access).
 * Functions implemented as constexpr are `test`, `none`, `any`, `all`, `count`, `to_ulong`, `to_ullong`.
@@ -66,3 +66,4 @@ for( ;; ++c ) {}
 ## Caveats
 * bitset2 requires a C++14 compliant compiler.
 * Tested with gcc 4.9 and 5.3 and clang 3.7.
+* Memory footprint is not optimized for small bit-sizes since data are stored in `std::array<ULLONG,n>`.
