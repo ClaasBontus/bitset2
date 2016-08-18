@@ -32,22 +32,16 @@ struct hash_impl
   using    ULLONG=        h_types::ULLONG;
   using    result_type=   std::size_t;
   using    array_t=       h_types::array_t<n_ullong>;
-      
+
   enum : size_t
-  { size_t_bits=  sizeof(size_t) * CHAR_BIT          ///< #bits in size_t
+  { size_t_bits=  sizeof(result_type) * CHAR_BIT     ///< #bits in result_type
   , ullong_bits=  h_types::ullong_bits               ///< #bits in ULLONG
-  , bits_div=     ullong_bits / size_t_bits
+  , bits_mod=     ullong_bits % size_t_bits
+  , bits_div=     ullong_bits / size_t_bits + ( bits_mod > 0 )
   };
-  
-  enum : bool
-  { easy_bits= (size_t_bits>=ullong_bits)  };
-  
-  enum : ULLONG
-  { bit_pttrn= 
-      (~0ull) >> (easy_bits ? 0 : (ullong_bits-size_t_bits))
-  };
-  
-  
+
+  enum : bool { easy_bits= ( size_t_bits >= ullong_bits )  };
+
   result_type
   operator()( array_t const & arr ) const noexcept
   {
@@ -55,44 +49,48 @@ struct hash_impl
     if( n_ullong == 1 )
     {
       if( easy_bits ) return arr[0];
-      return      to_size_t( arr[0] );
+      return to_result_t( arr[0] );
     } // if n_ullong == 1
-    
+
     return cmpsd_hash( arr );
   }
-  
+
   result_type
-  to_size_t( ULLONG a ) const noexcept
+  to_result_t( ULLONG a ) const noexcept
   {
-    size_t ret_val= 0;
-    size_t shft=    0;
+    result_type ret_val= 0;
+    size_t      shft=    0;
     for( size_t c= 0; c < bits_div; ++c, shft += size_t_bits )
     {
-      auto const crrnt= size_t( a >> shft );
+      auto const crrnt= result_type( a >> shft );
       do_combine( ret_val, crrnt, c );
     }
     return ret_val;
-  } // to_size_t
-  
+  } // to_result_t
+
   result_type
   cmpsd_hash( array_t const & arr ) const noexcept
   {
-    size_t ret_val= 0;
-    
+    result_type ret_val= 0;
+
     for( size_t c= 0; c < n_ullong; ++c )
     {
-      auto const crrnt= ( easy_bits ) ? size_t(arr[c]) : to_size_t(arr[c]);
+      auto const crrnt= easy_bits
+                      ? result_type(arr[c]) : to_result_t(arr[c]);
       do_combine( ret_val, crrnt, c );
     }
-    
+
     return ret_val;
   } // cmpsd_hash
-  
+
   void
-  do_combine( size_t &r, size_t crrnt, size_t cnt ) const noexcept
+  do_combine( result_type &r, result_type crrnt, size_t cnt ) const noexcept
   {
     crrnt += cnt;
-    if( cnt > 0 )  crrnt= ( crrnt << cnt ) | ( crrnt >> (size_t_bits-cnt) );
+    auto const n_rot= cnt % size_t_bits;
+    if( n_rot > 0 )
+              crrnt= ( crrnt << n_rot ) | ( crrnt >> (size_t_bits-n_rot) );
+
     r ^= crrnt;
   } // do_combine
 }; // struct hash_impl

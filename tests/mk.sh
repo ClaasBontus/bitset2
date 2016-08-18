@@ -1,4 +1,4 @@
-cc=g++-5
+cc=g++-4.9
 #cc=clang++
 
 $cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto test_bitset2_01.cpp -o test_bitset2_01

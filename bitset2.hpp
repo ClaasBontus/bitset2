@@ -180,14 +180,15 @@ public:
   bitset2 &
   rotate_left( size_t n_rot ) noexcept
   {
-    this->get_data()= detail::array_ops<N>( n_rot ).rot_left( this->data() );
+    this->get_data()= detail::array_ops<N>( n_rot ).rotate_left( this->data() );
     return *this;
   }
 
   bitset2 &
   rotate_right( size_t n_rot ) noexcept
   {
-    this->get_data()= detail::array_ops<N>( n_rot ).rot_right( this->data() );
+    this->get_data()=
+          detail::array_ops<N>( N - ( n_rot % N ) ).rotate_left( this->data() );
     return *this;
   }
 
@@ -233,7 +234,7 @@ public:
   {
     this->get_data()=
           detail::array_funcs<bitset2::n_array>().bitwise_or( this->data(),
-                                                           v2.data() );
+                                                              v2.data() );
     return *this;
   }
 
@@ -242,7 +243,7 @@ public:
   {
     this->get_data()=
           detail::array_funcs<bitset2::n_array>().bitwise_and( this->data(),
-                                                            v2.data() );
+                                                               v2.data() );
     return *this;
   }
 
@@ -251,7 +252,7 @@ public:
   {
     this->get_data()=
           detail::array_funcs<bitset2::n_array>().bitwise_xor( this->data(),
-                                                            v2.data() );
+                                                               v2.data() );
     return *this;
   }
 
@@ -333,7 +334,7 @@ bitset2<N>
 rotate_left( bitset2<N> const & bs, size_t n_rot ) noexcept
 {
   return
-    bitset2<N>( detail::array_ops<N>( n_rot ).rot_left( bs.data() ) );
+    bitset2<N>( detail::array_ops<N>( n_rot ).rotate_left( bs.data() ) );
 }
 
 
@@ -343,7 +344,8 @@ bitset2<N>
 rotate_right( bitset2<N> const & bs, size_t n_rot ) noexcept
 {
   return
-    bitset2<N>( detail::array_ops<N>( n_rot ).rot_right( bs.data() ) );
+    bitset2<N>( detail::array_ops<N>( N - ( n_rot % N ) ).
+                rotate_left( bs.data() ) );
 }
 
 
@@ -352,8 +354,36 @@ template<size_t N,size_t M>
 constexpr
 bitset2<N>
 convert_to( bitset2<M> const & bs ) noexcept
+{ return bitset2<N>( bs.data() ); }
+
+
+/// \brief Returns true if f returns true for each pair
+/// of ULLONG values in bs1 and bs2. f should be a binary function
+/// taking two ULLONG values and returning bool.
+template<size_t N, class F>
+constexpr
+bool
+zip_fold_and( bitset2<N> const & bs1, bitset2<N> const & bs2,
+              F f ) noexcept(noexcept( f( 0ull, 0ull ) ))
 {
-  return bitset2<N>( bs.data() );
+  return
+    detail::array_funcs<bitset2<N>::n_array>().zip_fold_and( bs1.data(),
+                                                             bs2.data(), f );
+}
+
+
+/// \brief Returns true if f returns true for at least one pair
+/// of ULLONG values in bs1 and bs2. f should be a binary function
+/// taking two ULLONG values and returning bool.
+template<size_t N, class F>
+constexpr
+bool
+zip_fold_or( bitset2<N> const & bs1, bitset2<N> const & bs2,
+             F f ) noexcept(noexcept( f( 0ull, 0ull ) ))
+{
+  return
+    detail::array_funcs<bitset2<N>::n_array>().zip_fold_or( bs1.data(),
+                                                            bs2.data(), f );
 }
 
 
@@ -467,24 +497,24 @@ operator+( Bitset2::bitset2<N> const & bs1,
 
 namespace std
 {
-    template<size_t N>
-    struct hash<Bitset2::bitset2<N> >
-    {
-      using argument_type= Bitset2::bitset2<N>;
-      using result_type=   std::size_t;
+  template<size_t N>
+  struct hash<Bitset2::bitset2<N> >
+  {
+  private:
+    enum : size_t
+    { n_array= Bitset2::detail::bitset2_impl<N>::n_array };
 
-      result_type operator()( argument_type const& bs ) const
-      {
-//        return m_func( std::bitset<N>( bs ) );
-        return m_func( bs.data() );
-      }
-    private:
-      enum : size_t
-      { n_array= Bitset2::detail::bitset2_impl<N>::n_array };
+    Bitset2::detail::hash_impl<n_array>   m_func;
 
-      Bitset2::detail::hash_impl<n_array>   m_func;
-//       std::hash<std::bitset<N> >  m_func;
-    }; // struct hash
+  public:
+    using argument_type= Bitset2::bitset2<N>;
+    using result_type=
+          typename Bitset2::detail::hash_impl<n_array>::result_type;
+
+    result_type operator()( argument_type const& bs ) const
+    { return m_func( bs.data() ); }
+  }; // struct hash
+
 } // namespace std
 
 

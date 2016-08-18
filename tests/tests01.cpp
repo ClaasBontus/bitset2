@@ -27,7 +27,10 @@
   F <97>(); \
   F <127>(); \
   F <128>(); \
-  F <129>();
+  F <129>(); \
+  F <255>(); \
+  F <256>(); \
+  F <257>();
 
 
 template<size_t N>
@@ -56,7 +59,7 @@ struct dummy_add
   //
   enum : ULLONG
   {   hgh_pattern=  (N==0) ? 0ull
-                           : (mod_val==0) ? (~0ull) 
+                           : (mod_val==0) ? (~0ull)
                                           : ((~0ull) >> (ull_bits-mod_val))
   };
   //
@@ -67,7 +70,7 @@ struct dummy_add
   {
     array_t  ret_val;
     ULLONG   crry= 0ull;
-    
+
     for( size_t c= 0; c < n_ull; ++c )
     {
       auto const v= a1[c] + a2[c] + crry;
@@ -76,7 +79,7 @@ struct dummy_add
       ret_val[c]= v;
     }
     if( n_ull ) ret_val[n_ull-1] &= hgh_pattern;
-    
+
     return ret_val;
   } // add
   //
@@ -99,33 +102,33 @@ void
 test_any_all_none()
 {
   std::cout << "Entering test_any_all_none N= " << N << "\n";
-  
+
   t1<N> const empty1;
   t2<N> const empty2;
   auto  const full1= ~empty1;
   auto  const full2= ~empty2;
-  
+
   auto const  empty1a= t1<N>( empty2 );
   auto const  empty2a= t2<N>( empty1 );
   auto const  full1a=  t1<N>( full2 );
   auto const  full2a=  t2<N>( full1 );
-  
+
   assert(  empty1.none()  && !empty1.all()  && !empty1.any() );
   assert(  empty1a.none() && !empty1a.all() && !empty1a.any() );
   assert(  empty2a.none() && !empty2a.all() && !empty2a.any() );
   assert( !full1.none()   &&  full1.all()   &&  full1.any() );
   assert( !full1a.none()  &&  full1a.all()  &&  full1a.any() );
   assert( !full2a.none()  &&  full2a.all()  &&  full2a.any() );
-  
+
   gen_random_bitset2<N>  gen_rand;
   for( size_t c= 0; c < n_loops; ++c )
   {
     auto const  bs1= gen_rand();
     auto const  bs2= t2<N>( bs1 );
     auto const  bs1a= t1<N>( bs2 );
-    
+
     if( verbose ) std::cout << bs1.to_hex_string() << "\t" << c << "\n";
-    
+
     assert( bs1 == bs1a );
     assert( bs1.none() == bs2.none() );
     assert( bs1.all()  == bs2.all() );
@@ -141,10 +144,10 @@ void
 test_set_count_size()
 {
   std::cout << "Entering test_set_count_size N= " << N << "\n";
-  
+
   t1<N> const empty1;
   assert( empty1.size() == N );
-  
+
   gen_random_bitset2<N>  gen_rand;
   for( size_t c= 0; c < n_loops; ++c )
   {
@@ -156,14 +159,14 @@ test_set_count_size()
       if( bs1.test( b_c ) ) ++n_set1;
       if( bs1[b_c] )        ++n_set2;
     }
-    
-    if( verbose ) std::cout << bs1.to_hex_string() << "\t" << n_set1 
+
+    if( verbose ) std::cout << bs1.to_hex_string() << "\t" << n_set1
                             << "\t" << c << "\t" << bs1 << "\n";
-    
+
     auto bs2= bs1;
     bs2.flip();
     auto const cnt2= bs2.count();
-    
+
     assert( n_set1 == cnt1 );
     assert( n_set1 == n_set2 );
     assert( cnt2   == N - cnt1 );
@@ -178,19 +181,22 @@ void
 test_rotate()
 {
   std::cout << "Entering test_rotate N= " << N << "\n";
-  
+
   gen_random_bitset2<N>  gen_rand;
   for( size_t c= 0; c < n_loops; ++c )
   {
     auto const  bs1=  gen_rand();
     auto const  cnt1= bs1.count();
-    
+
     for( size_t b_c= 0; b_c < 2 * N; ++b_c )
     {
+      auto const b_c_mod= b_c % N;
       auto const bs2_r= Bitset2::rotate_right( bs1,   b_c );
       auto const bs2_l= Bitset2::rotate_left(  bs1,   b_c );
       auto const bs2a=  Bitset2::rotate_left(  bs2_r, b_c );
       auto const bs2b=  Bitset2::rotate_right( bs2_l, b_c );
+      auto const bs2_r2= ( bs1 >> b_c_mod ) | ( bs1 << (N-b_c_mod) );
+      auto const bs2_l2= ( bs1 << b_c_mod ) | ( bs1 >> (N-b_c_mod) );
       if( verbose )
         std::cout << bs1 << "\t"
                   << b_c << "\t"
@@ -200,6 +206,8 @@ test_rotate()
       assert( cnt1 == bs2_l.count() );
       assert( bs2a == bs1 );
       assert( bs2b == bs1 );
+      assert( bs2_r2 == bs2_r );
+      assert( bs2_l2 == bs2_l );
     }
   } // for c
 } // test_rotate
@@ -212,14 +220,14 @@ void
 test_shift()
 {
   std::cout << "Entering test_shift N= " << N << "\n";
-  
+
   gen_random_bitset2<N>  gen_rand;
   t1<N> const            empty1;
-  
+
   for( size_t c= 0; c < n_loops; ++c )
   {
     auto const  bs1=  gen_rand();
-    
+
     for( size_t b_c= 0; b_c <= N + 5; ++b_c )
     {
       auto const bs1_l= bs1 << b_c;
@@ -253,12 +261,12 @@ void
 test_add()
 {
   std::cout << "Entering test_add N= " << N << "\n";
-  
+
   gen_random_bitset2<N>  gen_rand;
   dummy_add<N>           adder;
   t1<N>  const           one{{ 1ull }};
   t1<N>  const           all= t1<N>().set();
-  
+
   for( size_t c= 0; c < n_loops; ++c )
   {
     auto const  bs1=  gen_rand();
@@ -266,7 +274,7 @@ test_add()
     auto        bs3=  bs1;
     auto        bs4=  bs1;
     ++bs3; --bs4;
-    
+
     auto const  add1= bs1 + bs2;
     auto const  add2= adder.add( bs1.data(), bs2.data() );
     auto const  add3= adder.add( bs1.data(), one.data() );
@@ -291,9 +299,9 @@ void
 test_not()
 {
   std::cout << "Entering test_not N= " << N << "\n";
-  
+
   gen_random_bitset2<N>  gen_rand;
-  
+
   for( size_t c= 0; c < n_loops; ++c )
   {
     auto const  bs1=  gen_rand();
@@ -314,9 +322,9 @@ void
 test_bitwise_ops()
 {
   std::cout << "Entering test_bitwise_ops N= " << N << "\n";
-  
+
   gen_random_bitset2<N>  gen_rand;
-  
+
   for( size_t c= 0; c < n_loops; ++c )
   {
     auto const  bs1=   gen_rand();
@@ -324,19 +332,19 @@ test_bitwise_ops()
     auto const  b_or=  bs1 | bs2;
     auto const  b_and= bs1 & bs2;
     auto const  b_xor= bs1 ^ bs2;
-    
+
     auto const  sbs1=   t2<N>( bs1 );
     auto const  sbs2=   t2<N>( bs2 );
     auto const  sb_or=  sbs1 | sbs2;
     auto const  sb_and= sbs1 & sbs2;
     auto const  sb_xor= sbs1 ^ sbs2;
-    
+
     if( verbose )
       std::cout << "        " << bs1 << " op " << bs2
                 << "\nop= |:  " << b_or
                 << "\nop= &:  " << b_and
                 << "\nop= ^:  " << b_xor << "\n";
-    
+
     assert( sb_or  == t2<N>( b_or ) );
     assert( sb_and == t2<N>( b_and ) );
     assert( sb_xor == t2<N>( b_xor ) );

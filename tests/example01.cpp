@@ -17,7 +17,7 @@
 
 template<size_t n_bits>
 using BS2=    Bitset2::bitset2<n_bits>;
-using ULLONG= unsigned long long;
+using ULLONG= typename BS2<1>::ULLONG;
 
 int main()
 {

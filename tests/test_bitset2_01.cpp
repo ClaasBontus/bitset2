@@ -13,7 +13,31 @@
 
 #include <iostream>
 #include <sstream>
+#include <cassert>
 #include "bitset2.hpp"
+
+
+template<size_t N>
+bool
+is_subset_of( Bitset2::bitset2<N> const &bs1, Bitset2::bitset2<N> const &bs2 )
+{
+  using ULLONG= typename Bitset2::bitset2<N>::ULLONG;
+  return Bitset2::zip_fold_and( bs1, bs2,
+                                []( ULLONG v1, ULLONG v2 ) noexcept
+                                  { return (v1 & ~v2) == 0; } );
+} // is_subset_of
+
+
+template<size_t N>
+bool
+unequal( Bitset2::bitset2<N> const &bs1, Bitset2::bitset2<N> const &bs2 )
+{
+  using ULLONG= typename Bitset2::bitset2<N>::ULLONG;
+  return Bitset2::zip_fold_or( bs1, bs2,
+                               []( ULLONG v1, ULLONG v2 ) noexcept
+                                 { return v1 != v2; } );
+} // unequal
+
 
 
 int main()
@@ -258,7 +282,7 @@ int main()
   constexpr bitset2<128> b_a_02a( arr_add_01a );
   bitset2<128> b_a_02ap( arr_add_01ap );
   constexpr bitset2<128> b_a_02b( arr_add_01b );
-  
+
   std::cout << b_a_02ap.to_hex_string() << "\n";
 
   constexpr auto add_b_a_01a= b_a_01a + b_a_01a;
@@ -312,8 +336,8 @@ int main()
             << "= 0x" << b_from_str2.to_hex_string() << '\n';
   std::cout << b_from_str3
             << "= 0x" << b_from_str3.to_hex_string() << '\n';
-            
-            
+
+
   constexpr std::array<ULLONG,1>  s_arr_01a{{ 1ull }};
   constexpr std::array<ULLONG,2>  s_arr_01b{{ 0xFFFFFFFFFFFFFFFFull, 1ull }};
   constexpr std::array<ULLONG,3>  s_arr_01c{{ 0x1ull, 0xFFFFFFFFFFFFFFFFull, 0x3ull }};
@@ -326,7 +350,7 @@ int main()
   std::cout << "b_from_s_arr01b= " << b_from_s_arr01b.to_hex_string() << "\n";
   std::cout << "b_from_s_arr01c= " << b_from_s_arr01c.to_hex_string() << "\n";
   std::cout << "b_from_s_arr01d= " << b_from_s_arr01d.to_hex_string() << "\n";
-  
+
   constexpr bitset2<24>           b24_empty{ 0ull };
   constexpr bitset2<24>           b24_full= ~b24_empty;
   constexpr bitset2<23>           b23_a= convert_to<23>( b24_full );
@@ -334,4 +358,35 @@ int main()
   std::cout << "b24_full=  "  << b24_full << "\n";
   std::cout << "b23_a=      " << b23_a << "\n";
   std::cout << "b25_a=    "   << b25_a << "\n";
+
+  bitset2<7>    b7_a( "1010101" );
+  bitset2<7>    b7_b( "1000101" );
+  bitset2<7>    b7_c( "1110101" );
+  bitset2<7>    b7_d( "0110101" );
+  bitset2<7>    b7_e( "1010101" );
+
+  assert(  is_subset_of( b7_b, b7_a ) );
+  assert( !is_subset_of( b7_c, b7_a ) );
+  assert( !is_subset_of( b7_d, b7_a ) );
+  assert( !is_subset_of( b7_a, b7_d ) );
+
+  assert(  unequal( b7_a, b7_b ) );
+  assert( !unequal( b7_e, b7_a ) );
+
+  assert( b7_b <  b7_a );
+  assert( b7_c >  b7_a );
+  assert( b7_e <= b7_a );
+  assert( b7_a >= b7_d );
+
+  bitset2<2047>  b2047_a( 1ull );
+  auto           b2047_b= b2047_a << 999;
+  auto           b2047_c= b2047_a + b2047_b;
+  auto           b2047_d= b2047_a << 1999;
+  std::cout << "b2047_a= " << b2047_a.to_hex_string() << "\n"
+            << "b2047_b= " << b2047_b.to_hex_string() << "\n"
+            << "b2047_c= " << b2047_c.to_hex_string() << "\n";
+  assert( unequal( b2047_a, b2047_b ) );
+  assert( unequal( b2047_b, b2047_d ) );
+  assert(  is_subset_of( b2047_a, b2047_c ) );
+  assert( !is_subset_of( b2047_b, b2047_d ) );
 } // main
