@@ -16,6 +16,7 @@
 
 #include "h_types.hpp"
 #include "count_bits.hpp"
+#include "index_lsb_set.hpp"
 #include <utility>
 
 
@@ -31,8 +32,11 @@ namespace detail
       using array_t=                     h_types::array_t<n_array>;
       using array_p1_t=                  h_types::array_t<n_array+1>;
 
+      enum : size_t { ullong_bits=  h_types::ullong_bits
+                    , npos=         h_types::npos };
+
       /// Binary operator type
-      enum class op_type { or_op, and_op, xor_op };
+      enum class op_type { or_op, and_op, xor_op, sdiff_op };
 
       constexpr
       array_t
@@ -42,6 +46,10 @@ namespace detail
                                   std::make_index_sequence<n_array>() );
       }
 
+      void
+      bitwise_or_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
+      { return bitwise_op_assgn_impl( op_type::or_op, arr1, arr2 ); }
+
       constexpr
       array_t
       bitwise_and( array_t const &arr1, array_t const &arr2 ) const noexcept
@@ -50,6 +58,10 @@ namespace detail
                                 std::make_index_sequence<n_array>() );
       }
 
+      void
+      bitwise_and_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
+      { return bitwise_op_assgn_impl( op_type::and_op, arr1, arr2 ); }
+
       constexpr
       array_t
       bitwise_xor( array_t const &arr1, array_t const &arr2 ) const noexcept
@@ -57,6 +69,23 @@ namespace detail
         return bitwise_op_impl( op_type::xor_op, arr1, arr2,
                                 std::make_index_sequence<n_array>() );
       }
+
+      void
+      bitwise_xor_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
+      { return bitwise_op_assgn_impl( op_type::xor_op, arr1, arr2 ); }
+
+      constexpr
+      array_t
+      bitwise_setdiff( array_t const &arr1, array_t const &arr2 ) const noexcept
+      {
+        return bitwise_op_impl( op_type::sdiff_op, arr1, arr2,
+                                std::make_index_sequence<n_array>() );
+      }
+
+      void
+      bitwise_setdiff_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
+      { return bitwise_op_assgn_impl( op_type::sdiff_op, arr1, arr2 ); }
+
 
       constexpr
       bool
@@ -225,6 +254,20 @@ namespace detail
       }
 
 
+      void
+      bitwise_op_assgn_impl( op_type opt,
+                             array_t &arr1, array_t const &arr2 ) const noexcept
+      {
+        for( size_t c= 0; c < n_array; ++c )
+        {
+          if(      opt == op_type::or_op  ) arr1[c] |=  arr2[c];
+          else if( opt == op_type::and_op ) arr1[c] &=  arr2[c];
+          else if( opt == op_type::xor_op ) arr1[c] ^=  arr2[c];
+          else                              arr1[c] &= ~arr2[c];
+        }
+      }
+
+
       template<size_t ... S>
       constexpr
       array_t
@@ -240,7 +283,8 @@ namespace detail
       {
         return   (   opt == op_type::or_op )  ? ( arr1[idx] | arr2[idx] )
                : ( ( opt == op_type::and_op ) ? ( arr1[idx] & arr2[idx] )
-                                              : ( arr1[idx] ^ arr2[idx] ) );
+                   : ( opt == op_type::xor_op ) ? ( arr1[idx] ^ arr2[idx] )
+                                                : ( arr1[idx] & ~arr2[idx] ) );
       }
 
       /// Count bits in each element of arr
@@ -258,6 +302,18 @@ namespace detail
       sum_impl( std::array<T, n_array> const &vals,
                 size_t ct= n_array - 1 ) const noexcept
       { return vals[ct] + ( ( ct == 0 ) ? 0 : sum_impl( vals, ct - 1 ) ); }
+
+
+      constexpr
+      size_t
+      idx_lsb_set( array_t const &arr, ULLONG v, size_t idx ) const noexcept
+      {
+        return
+          v == 0ull
+            ? ( idx + 1 == n_array ? npos
+                                   : idx_lsb_set( arr, arr[idx+1], idx + 1 ) )
+            : idx * ullong_bits + index_lsb_set<ULLONG>()( v );
+      }
 
   }; // struct array_funcs
 

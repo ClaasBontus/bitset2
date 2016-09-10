@@ -103,7 +103,9 @@ namespace detail
   template<size_t N>
   struct array_add
   {
+    using ULLONG=                      h_types::ULLONG;
     using b_chars=                     bit_chars<N>;
+    enum : ULLONG {   hgh_bit_pattern= b_chars::hgh_bit_pattern };
     enum : size_t {   n_array=         b_chars::n_array   };
     using array_t=                     h_types::array_t<n_array>;
 
@@ -115,6 +117,19 @@ namespace detail
         ( N == 0 ) ? array_t{}
                    : array_add_h<N,n_array-1>().add_h3( arr1, arr2 ).second;
     }
+
+    void
+    add_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
+    {
+      ULLONG  carry= 0ull;
+      for( size_t  c= 0; c < n_array; ++c )
+      {
+        auto const sm= arr1[c] + arr2[c] + carry;
+        carry= ( sm < arr1[c] || sm < arr2[c] );
+        arr1[c]= sm;
+      }
+      arr1[n_array-1] &= hgh_bit_pattern;
+    } // add_assgn
   }; // struct array_add
 
 } // namespace detail

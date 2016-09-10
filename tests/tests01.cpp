@@ -178,6 +178,37 @@ test_set_count_size()
 
 template<size_t N>
 void
+test_set()
+{
+  std::cout << "Entering test_set N= " << N << "\n";
+
+  gen_random_bitset2<N>  gen_rand;
+  for( size_t c= 0; c < n_loops; ++c )
+  {
+    auto  bs1=  gen_rand();
+    auto  bs2=  bs1;
+    auto  bs3= t2<N>( bs1 );
+    bool  flag= false;
+    for( size_t b= 0; b < N; ++ b )
+    {
+      bool const bt1= bs1[b];
+      bs1.set( b, flag );
+      auto const bt2= bs2.test_set( b, flag);
+      assert( bt1 == bt2 );
+      bs3.set( b, flag );
+
+      flag= !flag;
+    }
+    assert( bs1 == bs2 );
+    assert( bs1 == t1<N>( bs3 ) );
+  } // for c
+} // test_set
+
+
+
+
+template<size_t N>
+void
 test_rotate()
 {
   std::cout << "Entering test_rotate N= " << N << "\n";
@@ -232,6 +263,10 @@ test_shift()
     {
       auto const bs1_l= bs1 << b_c;
       auto const bs1_r= bs1 >> b_c;
+      auto       bs1_c1= bs1;
+      auto       bs1_c2= bs1;
+      bs1_c1 <<= b_c;
+      bs1_c2 >>= b_c;
       if( verbose )
         std::cout << bs1 << "\t"
                   << bs1_l << "\t"
@@ -243,11 +278,15 @@ test_shift()
         auto const bs2_r= bs2 >> b_c;
         assert( bs2_l == t2<N>( bs1_l ) );
         assert( bs2_r == t2<N>( bs1_r ) );
+        assert( bs1_c1 == bs1_l );
+        assert( bs1_c2 == bs1_r );
       }
       else
       {
         assert( bs1_l == empty1 );
         assert( bs1_r == empty1 );
+        assert( bs1_c1 == empty1 );
+        assert( bs1_c2 == empty1 );
       }
     } // for b_c
   } // for c
@@ -273,7 +312,9 @@ test_add()
     auto const  bs2=  gen_rand();
     auto        bs3=  bs1;
     auto        bs4=  bs1;
+    auto        bs5=  bs1;
     ++bs3; --bs4;
+    bs5 += bs2;
 
     auto const  add1= bs1 + bs2;
     auto const  add2= adder.add( bs1.data(), bs2.data() );
@@ -285,11 +326,40 @@ test_add()
     auto const  cmp1= adder.compare( add2, add1.data() );
     auto const  cmp2= adder.compare( add3, bs3.data() );
     auto const  cmp3= adder.compare( add4, bs4.data() );
+    auto const  cmp4= adder.compare( add2, bs5.data() );
     assert( cmp1 );
     assert( cmp2 );
     assert( cmp3 );
+    assert( cmp4 );
   } // for c
 } // test_add
+
+
+
+
+template<size_t N>
+void
+test_difference()
+{
+  std::cout << "Entering test_difference N= " << N << "\n";
+
+  gen_random_bitset2<N>  gen_rand;
+
+  for( size_t c= 0; c < n_loops; ++c )
+  {
+    auto const  bs1=  gen_rand();
+    auto const  bs2=  gen_rand();
+    auto        bs3=  bs1;
+
+    auto const  d1=   Bitset2::difference( bs1, bs2 );
+    auto const  d2=   bs1 & ~bs2;
+    bs3.difference( bs2 );
+
+    assert( d2  == d1 );
+    assert( bs3 == d1 );
+  } // for c
+} // test_difference
+
 
 
 
@@ -313,6 +383,77 @@ test_not()
     }
   } // for c
 } // test_not
+
+
+template<size_t N>
+std::vector<size_t>
+idx_lst( t1<N> const &bs )
+{
+  std::vector<size_t> ret_val;
+  for( size_t c= 0; c < N; ++c )
+    if( bs[c] ) ret_val.push_back( c );
+  return ret_val;
+} // idx_lst
+
+
+
+template<size_t N>
+void
+test_find()
+{
+  std::cout << "Entering test_find N= " << N << "\n";
+
+  gen_random_bitset2<N>  gen_rand;
+
+  for( size_t c= 0; c < N; ++ c)
+  {
+    auto bs1= t1<N>();
+
+    assert( bs1.find_first() == Bitset2::bitset2<N>::npos );
+    assert( bs1.find_next(0) == Bitset2::bitset2<N>::npos );
+
+    bs1[c]= true;
+    assert( bs1.find_first() == c );
+    if( c > 0 )
+    {
+      assert( bs1.find_next( c - 1 ) == c );
+
+      bs1[0]= true;
+      bs1[N-1]= true;
+      assert( bs1.find_first() == 0 );
+      auto idx= bs1.find_next( c );
+      if( c < N - 1 ) assert( idx == N - 1 );
+      else            assert( idx == Bitset2::bitset2<N>::npos );
+
+      for( size_t b= 0; b < c; ++b ) bs1[b]= true;
+      idx= bs1.find_next( c );
+      if( c < N - 1 ) assert( idx == N - 1 );
+      else            assert( idx == Bitset2::bitset2<N>::npos );
+    }
+  } // for c
+
+  for( size_t c= 0; c < n_loops; ++c )
+  {
+    auto const  bs1=  gen_rand();
+    auto const  lst=  idx_lst( bs1 );
+    if( lst.empty() ) assert( bs1.find_first() == Bitset2::bitset2<N>::npos );
+    else
+    {
+      auto b_it= lst.begin();
+      auto e_it= lst.end();
+      auto idx=  bs1.find_first();
+      assert( idx == *(b_it++) );
+      for( ; b_it != e_it; ++b_it )
+      {
+        idx= bs1.find_next( idx );
+        assert( idx == *b_it );
+      }
+      idx= bs1.find_next( idx );
+      assert( idx == Bitset2::bitset2<N>::npos );
+    }
+  } // for c
+
+} // test_find
 
 
 
@@ -358,9 +499,12 @@ main()
 {
   TESTMANY(test_any_all_none)
   TESTMANY(test_set_count_size)
+  TESTMANY(test_set)
   TESTMANY(test_rotate)
   TESTMANY(test_shift)
   TESTMANY(test_add)
   TESTMANY(test_not)
   TESTMANY(test_bitwise_ops)
+  TESTMANY(test_difference)
+  TESTMANY(test_find)
 } // main

@@ -29,7 +29,8 @@ class bitset2_impl
   using b_chars=                     bit_chars<N>;
 
 public:
-  enum : size_t { n_array= b_chars::n_array };
+  enum : size_t { n_array= b_chars::n_array
+                , npos=    h_types::npos };
   using ULONG=                       typename b_chars::ULONG;
   using ULLONG=                      typename b_chars::ULLONG;
   using array_t=                     h_types::array_t<n_array>;
@@ -136,6 +137,11 @@ protected:
   constexpr
   bool
   operator[]( size_t bit ) const noexcept
+  { return test_noexcept( bit ); }
+
+  constexpr
+  bool
+  test_noexcept( size_t bit ) const noexcept
   { return m_value[bit / ullong_bits] & ( 1ull << ( bit % ullong_bits ) ); }
 
   bitset2_impl &
@@ -165,6 +171,14 @@ protected:
     for( size_t c= 0; c < n_array; ++c ) m_value[c]= 0ull;
     return *this;
   }
+
+  bool
+  test_set( size_t bit, bool value= true )
+  {
+    if( bit >= N  )
+        throw std::out_of_range( "bitset2: Test-Setting of bit out of range" );
+    return test_set_noexcept( bit, value );
+  } // test_set
 
   bitset2_impl &
   flip_noexcept( size_t bit ) noexcept
@@ -239,6 +253,20 @@ public:
     else        m_value[bit / ullong_bits] &= ~(1ull << ( bit % ullong_bits ));
   }
 
+  bool
+  test_set_noexcept( size_t bit, bool value= true ) noexcept
+  {
+    auto const dv= bit / ullong_bits;
+    auto const md= bit % ullong_bits;
+    auto const pttrn= ( 1ull << md );
+    auto const ret_val= bool( m_value[dv] & pttrn );
+
+    if( value ) m_value[dv] |=  pttrn;
+    else        m_value[dv] &= ~pttrn;
+
+    return ret_val;
+  }
+
   constexpr
   bool
   none() const noexcept
@@ -259,6 +287,32 @@ public:
   count() const noexcept
   { return detail::array_funcs<n_array>().count( m_value ); }
 
+  /// \brief Returns index of first (least significant) bit set.
+  /// Returns npos if all bits are zero.
+  constexpr
+  size_t
+  find_first() const noexcept
+  {
+    return detail::array_funcs<n_array>().idx_lsb_set( m_value, m_value[0], 0 );
+  }
+
+  /// \brief Returns index of next (> idx) bit set.
+  /// Returns npos if no more bits set.
+  /// Throws out_of_range if idx >= N.
+  constexpr
+  size_t
+  find_next( size_t idx ) const
+  {
+    return idx >= N
+      ? throw std::out_of_range( "bitset2: find_next index out of range" )
+      : idx + 1 == N
+        ? npos
+        : detail::array_funcs<n_array>()
+            .idx_lsb_set( m_value,
+                          m_value[(idx+1) / ullong_bits]
+                            & ull_left_shift( ~0ull, (idx+1) % ullong_bits ),
+                          (idx+1) / ullong_bits );
+  }
 
   constexpr
   bool

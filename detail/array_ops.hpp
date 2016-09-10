@@ -57,6 +57,46 @@ namespace detail
     shift_right( array_t const &arr ) const noexcept
     { return shift_right_impl( arr, std::make_index_sequence<n_array>() ); }
 
+    void
+    shift_left_assgn( array_t &arr ) const noexcept
+    {
+      for( size_t c= n_ullong; c > 0; )
+      {
+        --c;
+        if( c >= m_shft_div )
+        {
+          auto const c2= c - m_shft_div;
+          ULLONG const v1= arr[c2] << m_shft_mod;
+          ULLONG const v2=   ( c2 == 0 ) ? 0ull
+                           : ull_right_shift( arr[c2-1] & m_shft_left_pattern,
+                                              m_shft_leftright_shift );
+          arr[c]= v1 | v2;
+        }
+        else arr[c]= 0ull;
+      } // for c
+      arr[n_array-1] &= hgh_bit_pattern;
+    } // shift_left_assgn
+
+    void
+    shift_right_assgn( array_t &arr ) const noexcept
+    {
+      for( size_t c= 0; c < n_ullong; ++c )
+      {
+        auto const c2= c + m_shft_div;
+        if( c2 < n_ullong )
+        {
+          ULLONG const v1= arr[c2] >> m_shft_mod;
+          ULLONG const v2=   ( c2 + 1 >= n_ullong ) ? 0ull
+                           : ull_left_shift( arr[c2+1] & m_shft_right_pattern,
+                                             m_shft_leftright_shift );
+          arr[c]= v1 | v2;
+        }
+        else arr[c]= 0ull;
+      } // for c
+      arr[n_array-1] &= hgh_bit_pattern;
+    } // shift_right_assgn
+
+
     constexpr
     array_t
     rotate_left( array_t const &arr ) const noexcept

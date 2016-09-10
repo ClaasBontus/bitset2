@@ -1,12 +1,26 @@
-cc=g++-4.9
+cc=g++-5
 #cc=clang++
 
-$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto test_bitset2_01.cpp -o test_bitset2_01
+p=tests01
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p
 
-$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto test_bitset2_02.cpp -o test_bitset2_02
+p=test_bitset2_01
+echo "Compiling $p"
+$cc -O2 -Wall -Wno-unused-but-set-variable -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p
 
-$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto counter128.cpp -o counter128
+p=test_bitset2_02
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p
 
-$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto tests01.cpp -o tests01
+p=counter128
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p
 
-$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto example01.cpp -o example01
+p=bench01
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto -D_GLIBCXX_USE_NANOSLEEP $p.cpp -o $p
+
+p=example01
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p

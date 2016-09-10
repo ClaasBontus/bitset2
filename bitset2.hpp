@@ -50,6 +50,8 @@ public:
   using ULLONG=  typename detail::bitset2_impl<N>::ULLONG;
   using detail::bitset2_impl<N>::n_array;
 
+  enum : size_t { npos= detail::h_types::npos };
+
   class reference
   {
     friend class bitset2;
@@ -78,7 +80,7 @@ public:
       return *this;
     }
     operator bool() const noexcept
-    { return (*m_ptr)[m_bit]; }
+    { return m_ptr->test_noexcept(m_bit); }
     bool operator~() const noexcept
     { return !bool(*this); }
   }; // class reference
@@ -166,14 +168,14 @@ public:
   bitset2 &
   operator<<=( size_t n_shift ) noexcept
   {
-    this->get_data()= detail::array_ops<N>( n_shift ).shift_left( this->data());
+    detail::array_ops<N>( n_shift ).shift_left_assgn( this->get_data() );
     return *this;
   }
 
   bitset2 &
   operator>>=( size_t n_shift ) noexcept
   {
-    this->get_data()= detail::array_ops<N>( n_shift ).shift_right(this->data());
+    detail::array_ops<N>( n_shift ).shift_right_assgn( this->get_data() );
     return *this;
   }
 
@@ -195,7 +197,7 @@ public:
   bitset2 &
   operator+=( bitset2 const &bs2 ) noexcept
   {
-    this->get_data()= detail::array_add<N>().add( this->data(), bs2.data() );
+    detail::array_add<N>().add_assgn( this->get_data(), bs2.data() );
     return *this;
   }
 
@@ -232,8 +234,7 @@ public:
   bitset2 &
   operator|=( bitset2 const & v2 ) noexcept
   {
-    this->get_data()=
-          detail::array_funcs<bitset2::n_array>().bitwise_or( this->data(),
+    detail::array_funcs<bitset2::n_array>().bitwise_or_assgn( this->get_data(),
                                                               v2.data() );
     return *this;
   }
@@ -241,8 +242,7 @@ public:
   bitset2 &
   operator&=( bitset2 const & v2 ) noexcept
   {
-    this->get_data()=
-          detail::array_funcs<bitset2::n_array>().bitwise_and( this->data(),
+    detail::array_funcs<bitset2::n_array>().bitwise_and_assgn( this->get_data(),
                                                                v2.data() );
     return *this;
   }
@@ -250,9 +250,17 @@ public:
   bitset2 &
   operator^=( bitset2 const & v2 ) noexcept
   {
-    this->get_data()=
-          detail::array_funcs<bitset2::n_array>().bitwise_xor( this->data(),
+    detail::array_funcs<bitset2::n_array>().bitwise_xor_assgn( this->get_data(),
                                                                v2.data() );
+    return *this;
+  }
+
+  /// Computes the set difference, i.e. *this &= ~v2
+  bitset2 &
+  difference( bitset2 const & v2 ) noexcept
+  {
+    detail::array_funcs<bitset2::n_array>()
+              .bitwise_setdiff_assgn( this->get_data(), v2.data() );
     return *this;
   }
 
@@ -275,6 +283,12 @@ public:
       throw std::out_of_range( "bitset2: Resetting of bit out of range" );
    return set( bit, false );
  }
+
+ ///\brief Sets the specified bit if value==true, clears it otherwise.
+ /// Returns the previous state of the bit.
+ bool
+ test_set( size_t bit, bool value= true )
+ { return detail::bitset2_impl<N>::test_set( bit, value ); }
 
   bitset2 &
   flip() noexcept
@@ -346,6 +360,18 @@ rotate_right( bitset2<N> const & bs, size_t n_rot ) noexcept
   return
     bitset2<N>( detail::array_ops<N>( N - ( n_rot % N ) ).
                 rotate_left( bs.data() ) );
+}
+
+
+/// Computes the set difference, i.e. bs1 & ~bs2
+template<size_t N>
+constexpr
+bitset2<N>
+difference( bitset2<N> const & bs1, bitset2<N> const & bs2 ) noexcept
+{
+  return
+    bitset2<N>( detail::array_funcs<bitset2<N>::n_array>()
+                            .bitwise_setdiff( bs1.data(), bs2.data() ) );
 }
 
 

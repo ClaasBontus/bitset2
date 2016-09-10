@@ -15,6 +15,10 @@ as possible.
 * Additional constexpr functions `rotate_left` and `rotate_right` for binary rotations.
 * Additional member functions `rotate_left` and `rotate_right`.
 * Additional member function `to_hex_string()`.
+* Additional member function `test_set`, which sets or clears the specified bit and returns its previous state.
+* Additional constexpr function `difference`, which computes the set difference (`bs1 & ~bs2`) of two bitset2 objects.
+* Additional member function `difference`.
+* Additional constexpr member functions `find_first()` and `find_next(size_t)` returning the index of the first (next) bit set. Returning npos if all (remaining) bits are false.
 * Additional constexpr function `convert_to<n>` for converting an *m*-bit bitset2 into an *n*-bit bitset2.
 * Member function `data()` gives read access to the underlying `array<ULLONG,N>`. Here element with index zero is the least significant word.
 * Additional functions `zip_fold_and` and `zip_fold_or`. See below for details.
