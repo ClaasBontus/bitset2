@@ -14,6 +14,7 @@
 #define BITSET2_ARRAY_OPS_CB_HPP
 
 #include "bit_chars.hpp"
+#include "reverse_bits.hpp"
 
 
 namespace Bitset2
@@ -30,6 +31,8 @@ namespace detail
     enum : size_t {   ullong_bits=     b_chars::ullong_bits
                     , n_ullong=        b_chars::n_ullong
                     , n_array=         b_chars::n_array
+                    , mod_val=         b_chars::mod_val
+                    , n_m_mod=         mod_val == 0 ? 0 : ullong_bits - mod_val
                   };
     enum : ULLONG {   hgh_bit_pattern= b_chars::hgh_bit_pattern };
     using array_t=                     h_types::array_t<n_array>;
@@ -152,6 +155,16 @@ namespace detail
       arr[c] &= hgh_bit_pattern;
     } // decrement
 
+    /// Reverse bits
+    constexpr
+    array_t
+    reverse( array_t const &arr ) const noexcept
+    {
+      return   n_array == 1
+             ? array_t{{ reverse_bits<ULLONG>()( arr[0] ) >> n_m_mod }}
+             : reverse_impl( arr, std::make_index_sequence<n_array>() );
+    } // reverse
+
 
     //****************************************************
 
@@ -264,6 +277,32 @@ namespace detail
              :   ( ~arr[idx] )
                & ( (idx+1 == n_ullong) ? hgh_bit_pattern : ~(0ull) );
     }
+
+
+    template<size_t ... S>
+    constexpr
+    array_t
+    reverse_impl( array_t const &arr, std::index_sequence<S...> ) const noexcept
+    { return {{ h_reverse( S, arr )... }}; }
+
+    constexpr
+    ULLONG
+    h_reverse( size_t idx, array_t const &arr ) const noexcept
+    {
+      return   idx + 1 == n_ullong
+             ? reverse_bits<ULLONG>()( arr[0] ) >> n_m_mod
+             : reverse_bits<ULLONG>()( h2_reverse( idx, arr ) );
+    }
+
+    constexpr
+    ULLONG
+    h2_reverse( size_t idx, array_t const &arr ) const noexcept
+    {
+      return   mod_val == 0 ? arr[n_ullong-idx-1]
+             :   ( arr[n_ullong-idx-1] << n_m_mod )
+               | ( arr[n_ullong-idx-2] >> mod_val );
+    }
+
 
     size_t const     m_n_shift_mod;
     size_t const     m_shft_div;

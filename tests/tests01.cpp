@@ -96,6 +96,17 @@ struct dummy_add
 }; // struct dummy_add
 
 
+template<size_t N>
+t1<N>
+dummy_reverse( t1<N> const & bs )
+{
+  t1<N>  ret_val;
+  for( size_t c= 0; c < N; ++c ) ret_val[c]= bs[N-c-1];
+
+  return ret_val;
+}
+
+
 
 template<size_t N>
 void
@@ -494,9 +505,36 @@ test_bitwise_ops()
 
 
 
+
+template<size_t N>
+void
+test_reverse()
+{
+  std::cout << "Entering test_reverse N= " << N << "\n";
+
+  gen_random_bitset2<N>  gen_rand;
+
+  for( size_t c= 0; c < n_loops; ++c )
+  {
+    auto const  bs1=   gen_rand();
+    auto        bs2=   bs1;
+    auto const  bs3=   dummy_reverse( bs1 );
+    auto const  bs4=   Bitset2::reverse( bs1 );
+    bs2.reverse();
+    assert( bs2 == bs3 );
+    assert( bs4 == bs3 );
+    bs2.reverse();
+    assert( bs2 == bs1 );
+  } // for c
+} // test_reverse
+
+
+
 int
 main()
 {
+  TESTMANY(test_reverse)
+
   TESTMANY(test_any_all_none)
   TESTMANY(test_set_count_size)
   TESTMANY(test_set)

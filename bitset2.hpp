@@ -44,7 +44,7 @@ template<size_t N>
 class bitset2
 : public detail::bitset2_impl<N>
 {
-  static const auto   ullong_bits= detail::bitset2_impl<N>::ullong_bits;
+  enum : size_t { ullong_bits= detail::bitset2_impl<N>::ullong_bits };
 public:
   using array_t= typename detail::bitset2_impl<N>::array_t;
   using ULLONG=  typename detail::bitset2_impl<N>::ULLONG;
@@ -191,6 +191,13 @@ public:
   {
     this->get_data()=
           detail::array_ops<N>( N - ( n_rot % N ) ).rotate_left( this->data() );
+    return *this;
+  }
+
+  bitset2 &
+  reverse() noexcept
+  {
+    this->get_data()= detail::array_ops<N>( 0 ).reverse( this->data() );
     return *this;
   }
 
@@ -373,6 +380,14 @@ difference( bitset2<N> const & bs1, bitset2<N> const & bs2 ) noexcept
     bitset2<N>( detail::array_funcs<bitset2<N>::n_array>()
                             .bitwise_setdiff( bs1.data(), bs2.data() ) );
 }
+
+
+/// Returns bs with bits reversed
+template<size_t N>
+constexpr
+bitset2<N>
+reverse( bitset2<N> const & bs ) noexcept
+{ return bitset2<N>( detail::array_ops<N>( 0 ).reverse( bs.data() ) ); }
 
 
 /// Converts an M-bit bitset2 to an N-bit bitset2.

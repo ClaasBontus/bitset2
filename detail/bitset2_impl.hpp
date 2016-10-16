@@ -36,12 +36,16 @@ public:
   using array_t=                     h_types::array_t<n_array>;
 
 protected:
-  static const auto n_ullong=        b_chars::n_ullong;
-  static const auto ulong_bits=      b_chars::ulong_bits;
-  static const auto ullong_bits=     b_chars::ullong_bits;
-  static const auto ulong_max=       b_chars::ulong_max;
-  static const auto low_bit_pattern= b_chars::low_bit_pattern;
-  static const auto hgh_bit_pattern= b_chars::hgh_bit_pattern;
+  enum : size_t
+  { n_ullong=        b_chars::n_ullong
+  , ulong_bits=      b_chars::ulong_bits
+  , ullong_bits=     b_chars::ullong_bits
+  , ulong_max=       b_chars::ulong_max
+  };
+  enum : ULLONG
+  { low_bit_pattern= b_chars::low_bit_pattern
+  , hgh_bit_pattern= b_chars::hgh_bit_pattern
+  };
 
   constexpr
   bitset2_impl() noexcept

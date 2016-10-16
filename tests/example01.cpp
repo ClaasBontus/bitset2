@@ -43,4 +43,8 @@ int main()
   auto const     b5= Bitset2::rotate_left( b4, 3 );
   std::cout << b4 << "\n"     // 1110000
             << b5 << "\n";    // 0000111
+
+  BS2<7>        b6{ "1010010" };
+  b6.reverse();
+  std::cout << b6 << "\n";    // 0100101
 } // main
