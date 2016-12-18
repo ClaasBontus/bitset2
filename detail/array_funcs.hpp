@@ -25,15 +25,15 @@ namespace Bitset2
 namespace detail
 {
 
-  template<size_t n_array>
+  template<size_t n_array,class T>
   struct array_funcs
   {
-      using ULLONG=                      h_types::ULLONG;
-      using array_t=                     h_types::array_t<n_array>;
-      using array_p1_t=                  h_types::array_t<n_array+1>;
+      using base_t=                 T;
+      using array_t=       typename h_types<T>::template array_t<n_array>;
+      using array_p1_t=    typename h_types<T>::template array_t<n_array+1>;
 
-      enum : size_t { ullong_bits=  h_types::ullong_bits
-                    , npos=         h_types::npos };
+      enum : size_t { base_t_n_bits=  h_types<T>::base_t_n_bits
+                    , npos=           h_types<T>::npos };
 
       /// Binary operator type
       enum class op_type { or_op, and_op, xor_op, sdiff_op };
@@ -46,6 +46,7 @@ namespace detail
                                   std::make_index_sequence<n_array>() );
       }
 
+      /// Used for |= operator. Separate implementation for better performance.
       void
       bitwise_or_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::or_op, arr1, arr2 ); }
@@ -58,6 +59,7 @@ namespace detail
                                 std::make_index_sequence<n_array>() );
       }
 
+      /// Used for &= operator. Separate implementation for better performance.
       void
       bitwise_and_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::and_op, arr1, arr2 ); }
@@ -70,10 +72,12 @@ namespace detail
                                 std::make_index_sequence<n_array>() );
       }
 
+      /// Used for ^= operator. Separate implementation for better performance.
       void
       bitwise_xor_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::xor_op, arr1, arr2 ); }
 
+      /// Computes the set difference, i.e. arr1 & ~arr2
       constexpr
       array_t
       bitwise_setdiff( array_t const &arr1, array_t const &arr2 ) const noexcept
@@ -82,6 +86,8 @@ namespace detail
                                 std::make_index_sequence<n_array>() );
       }
 
+      /// \brief Computes the set difference, i.e. arr1 & ~arr2.
+      /// Separate implementation for better performance.
       void
       bitwise_setdiff_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::sdiff_op, arr1, arr2 ); }
@@ -119,7 +125,7 @@ namespace detail
       template<class F>
       bool
       zip_fold_and( array_t const &arr1, array_t const &arr2,
-                    F &f ) const noexcept(noexcept( f( 0ull, 0ull ) ))
+                    F &f ) const noexcept(noexcept( f( base_t(0), base_t(0) ) ))
       { return zip_fold_and_impl( arr1, arr2, f, 0 ); }
 
 
@@ -128,21 +134,21 @@ namespace detail
       template<class F>
       bool
       zip_fold_or( array_t const &arr1, array_t const &arr2,
-                   F &f ) const noexcept(noexcept( f( 0ull, 0ull ) ))
+                   F &f ) const noexcept(noexcept( f( base_t(0), base_t(0) ) ))
       { return zip_fold_or_impl( arr1, arr2, f, 0 ); }
 
 
       /// Prepend v1 in front of arr
       constexpr
       array_p1_t
-      prepend( ULLONG const v1, array_t const &arr ) const noexcept
+      prepend( base_t const v1, array_t const &arr ) const noexcept
       { return prepend_impl( v1, arr, std::make_index_sequence<n_array>()); }
 
 
       /// Append v1 to arr
       constexpr
       array_p1_t
-      append( array_t const &arr, ULLONG const v1 ) const noexcept
+      append( array_t const &arr, base_t const v1 ) const noexcept
       { return append_impl( arr, v1, std::make_index_sequence<n_array>()); }
 
 
@@ -150,35 +156,37 @@ namespace detail
       template<size_t n>
       constexpr
       array_t
-      copy_and_map( ULLONG const pttrn,
-                    h_types::array_t<n> const &arr ) const noexcept
+      copy_and_map( base_t const                          pttrn,
+                    typename
+                    h_types<T>::template array_t<n> const &arr ) const noexcept
       {
         return
           n_array == 0 ? array_t{}
              : copy_and_map_impl(
                  pttrn,
                  arr,
-                 gen_empty_array<n_array>(),
+                 gen_empty_array<n_array,T>(),
                  n >= n_array,
-                 std::make_index_sequence<ull_min( n_array-1, n )>(),
-                 std::make_index_sequence<n_array-1-ull_min(n_array-1, n)>() );
+                 std::make_index_sequence<ce_min( n_array-1, n )>(),
+                 std::make_index_sequence<n_array-1-ce_min(n_array-1, n)>() );
       } // copy_and_map
 
 
       //** _impl functions
 
-      template<size_t n,size_t ... S,size_t ... T>
+      template<size_t n,size_t ... S1,size_t ... S2>
       constexpr
       array_t
-      copy_and_map_impl( ULLONG const              pttrn,
-                         h_types::array_t<n> const &arr,
-                         array_t const             &zeroes,
-                         bool const                take_all,
-                         std::index_sequence<S...>,
-                         std::index_sequence<T...> ) const noexcept
+      copy_and_map_impl( base_t const                          pttrn,
+                         typename
+                         h_types<T>::template array_t<n> const &arr,
+                         array_t const                         &zeroes,
+                         bool const                            take_all,
+                         std::index_sequence<S1...>,
+                         std::index_sequence<S2...> ) const noexcept
       {
-        return {{ arr[S]..., zeroes[T]...,
-                 ( take_all ? arr[n_array-1] : 0ull ) & pttrn }};
+        return {{ arr[S1]..., zeroes[S2]...,
+                 base_t(( take_all ? arr[n_array-1] : base_t(0) ) & pttrn) }};
       }
 
 
@@ -187,7 +195,7 @@ namespace detail
       bool
       none_impl( size_t idx, array_t const &arr ) const noexcept
       {
-        return    ( arr[idx] == 0 )
+        return    ( arr[idx] == base_t(0) )
                && ( ( idx == 0 ) ? true : none_impl( idx - 1, arr )  );
       }
 
@@ -195,7 +203,7 @@ namespace detail
       template<size_t ... S>
       constexpr
       array_p1_t
-      append_impl( array_t const &arr, ULLONG const v1,
+      append_impl( array_t const &arr, base_t const v1,
                    std::index_sequence<S...> ) const noexcept
       { return {{ arr[S]..., v1 }}; }
 
@@ -203,7 +211,7 @@ namespace detail
       template<size_t ... S>
       constexpr
       array_p1_t
-      prepend_impl( ULLONG const v1, array_t const &arr,
+      prepend_impl( base_t const v1, array_t const &arr,
                     std::index_sequence<S...> ) const noexcept
       { return {{ v1, arr[S]... }}; }
 
@@ -233,8 +241,9 @@ namespace detail
       template<class F>
       bool
       zip_fold_and_impl( array_t const &arr1, array_t const &arr2,
-                         F &f,
-                         size_t ct ) const noexcept(noexcept( f( 0ull, 0ull )))
+                         F      &f,
+                         size_t ct )
+                            const noexcept(noexcept( f(base_t(0), base_t(0))))
       {
         return   ( ct == n_array ) ? true
                : (    f( arr1[ct], arr2[ct] )
@@ -245,8 +254,9 @@ namespace detail
       template<class F>
       bool
       zip_fold_or_impl( array_t const &arr1, array_t const &arr2,
-                        F &f,
-                        size_t ct ) const noexcept(noexcept( f( 0ull, 0ull )))
+                        F      &f,
+                        size_t ct )
+                            const noexcept(noexcept( f(base_t(0), base_t(0))))
       {
         return   ( ct == n_array ) ? false
                : (    f( arr1[ct], arr2[ct] )
@@ -265,7 +275,7 @@ namespace detail
           else if( opt == op_type::xor_op ) arr1[c] ^=  arr2[c];
           else                              arr1[c] &= ~arr2[c];
         }
-      }
+      } // bitwise_op_assgn_impl
 
 
       template<size_t ... S>
@@ -277,7 +287,7 @@ namespace detail
       { return {{ h_bitwise_op( S, opt, arr1, arr2 )... }};  }
 
       constexpr
-      ULLONG
+      base_t
       h_bitwise_op( size_t idx, op_type opt,
                      array_t const &arr1, array_t const &arr2 ) const noexcept
       {
@@ -296,23 +306,23 @@ namespace detail
 
 
       /// Sum over all elements in vals
-      template<class T>
+      template<class T1>
       constexpr
-      T
-      sum_impl( std::array<T, n_array> const &vals,
+      T1
+      sum_impl( std::array<T1, n_array> const &vals,
                 size_t ct= n_array - 1 ) const noexcept
-      { return vals[ct] + ( ( ct == 0 ) ? 0 : sum_impl( vals, ct - 1 ) ); }
+      { return vals[ct] + ( ( ct == 0 ) ? T1(0) : sum_impl( vals, ct - 1 ) ); }
 
 
       constexpr
       size_t
-      idx_lsb_set( array_t const &arr, ULLONG v, size_t idx ) const noexcept
+      idx_lsb_set( array_t const &arr, base_t v, size_t idx ) const noexcept
       {
         return
-          v == 0ull
+          v == base_t(0)
             ? ( idx + 1 == n_array ? npos
                                    : idx_lsb_set( arr, arr[idx+1], idx + 1 ) )
-            : idx * ullong_bits + index_lsb_set<ULLONG>()( v );
+            : idx * base_t_n_bits + index_lsb_set<base_t>()( v );
       }
 
   }; // struct array_funcs

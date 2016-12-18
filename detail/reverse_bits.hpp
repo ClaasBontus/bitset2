@@ -42,14 +42,13 @@ struct reverse_bits
   /// \brief Reverses bits in val.
   constexpr
   T
-  operator()( T val ) const noexcept
-  { return rvrs( val ); }
+  operator()( T val ) const noexcept  { return rvrs( val ); }
 
 private:
   constexpr
   T
   rvrs( T       val,
-        T       mask= ( ~T(0) ) >> n_bits_h,
+        T       mask= T( ~T(0) ) >> n_bits_h,
         size_t  s=    n_bits_h ) const noexcept
   {
     return   s == 0 ? val

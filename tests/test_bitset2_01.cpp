@@ -17,24 +17,24 @@
 #include "bitset2.hpp"
 
 
-template<size_t N>
+template<size_t N,class T>
 bool
-is_subset_of( Bitset2::bitset2<N> const &bs1, Bitset2::bitset2<N> const &bs2 )
+is_subset_of( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2 )
 {
-  using ULLONG= typename Bitset2::bitset2<N>::ULLONG;
+  using base_t= T;
   return Bitset2::zip_fold_and( bs1, bs2,
-                                []( ULLONG v1, ULLONG v2 ) noexcept
+                                []( base_t v1, base_t v2 ) noexcept
                                   { return (v1 & ~v2) == 0; } );
 } // is_subset_of
 
 
-template<size_t N>
+template<size_t N,class T>
 bool
-unequal( Bitset2::bitset2<N> const &bs1, Bitset2::bitset2<N> const &bs2 )
+unequal( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2 )
 {
-  using ULLONG= typename Bitset2::bitset2<N>::ULLONG;
+  using base_t= T;
   return Bitset2::zip_fold_or( bs1, bs2,
-                               []( ULLONG v1, ULLONG v2 ) noexcept
+                               []( base_t v1, base_t v2 ) noexcept
                                  { return v1 != v2; } );
 } // unequal
 
@@ -96,10 +96,10 @@ int main()
             << "b_64.reset()= " << b_64.reset() << "\n"
             << "b_65.reset()= " << b_65.reset() << "\n";
 
-  detail::bit_chars<4>   bc1;
-  detail::bit_chars<64>  bc2;
-  detail::bit_chars<65>  bc3;
-  detail::bit_chars<63>  bc4;
+  detail::bit_chars<4,ULLONG>   bc1;
+  detail::bit_chars<64,ULLONG>  bc2;
+  detail::bit_chars<65,ULLONG>  bc3;
+  detail::bit_chars<63,ULLONG>  bc4;
 
   bitset2<64>  lbp1( bc1.low_bit_pattern );
   bitset2<64>  lbp2( bc2.low_bit_pattern );
@@ -119,7 +119,7 @@ int main()
   std::array<unsigned long long,2>  ar1{{ ~(0ull), 1 }};
 
   constexpr
-  auto s_ar1= detail::array_ops<128>( 63 ).shift_left( ar1 );
+  auto s_ar1= detail::array_ops<128,ULLONG>( 63 ).shift_left( ar1 );
 
   std::cout << "\n" << ar1[1] << "  " << ar1[0] << "\n";
   std::cout << "\n" << s_ar1[1] << "  " << s_ar1[0] << "\n";
@@ -247,7 +247,8 @@ int main()
 
   constexpr bitset2<65>  bs33a( 0xFFFFFFFFFFFFFFFFull );
   // constexpr auto         bs33b= ( bs33a << 1 );
-  constexpr auto         bs33a_v= bs33a.to_ulong();
+  //constexpr
+  auto         bs33a_v= bs33a.to_ulong();
   std::cout << bs33a << " == " << bs33a_v << " == " << bs33a.to_hex_string() << "\n";
   // auto                   bs33b_v= bs33b.to_ulong(); // throws
   // std::cout << bs33b << " == " << bs33b_v << "\n";
@@ -385,8 +386,19 @@ int main()
   std::cout << "b2047_a= " << b2047_a.to_hex_string() << "\n"
             << "b2047_b= " << b2047_b.to_hex_string() << "\n"
             << "b2047_c= " << b2047_c.to_hex_string() << "\n";
+  std::cout << "bitset2<2047>::n_array= " << bitset2<2047>::n_array << '\n';
   assert( unequal( b2047_a, b2047_b ) );
   assert( unequal( b2047_b, b2047_d ) );
   assert(  is_subset_of( b2047_a, b2047_c ) );
   assert( !is_subset_of( b2047_b, b2047_d ) );
+
+  bitset2<16>  b16_a( "0000101000011111" );
+  bitset2<16>  b16_b;
+  std::cout << '\n'
+    << b16_a.to_hex_string() << '\n'                                    // 0a1f
+    << b16_a.to_hex_string( hex_params<>{'0', 'A', false, true, "0x"})  // 0xA1F
+    << '\n'
+    << b16_b.to_hex_string() << '\n'                                    // 0000
+    << b16_b.to_hex_string( hex_params<>{'0', 'a', false, false, "0X"}) // 0X
+    << '\n';
 } // main

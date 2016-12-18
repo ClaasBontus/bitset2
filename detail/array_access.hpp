@@ -23,29 +23,30 @@ namespace detail
 
   /// \brief array_access is used for getting bunches of 4 bits, which is
   /// needed when creating hex-strings
-  template<size_t N>
+  template<size_t N,class T>
   struct array_access
   {
-    using b_chars=                     bit_chars<N>;
-    using ULLONG=                      h_types::ULLONG;
-    enum : size_t {   ullong_bits=     b_chars::ullong_bits
+    using base_t=                      T;
+    using b_chars=                     bit_chars<N,T>;
+    enum : size_t {   base_t_n_bits=   b_chars::base_t_n_bits
                     , n_array=         b_chars::n_array
                   };
     enum : size_t {   div_four=        N / 4
                     , mod_four=        N % 4
                   };
-    using array_t=                     h_types::array_t<n_array>;
+    using array_t=       typename h_types<T>::template array_t<n_array>;
 
     constexpr
-    ULLONG
+    base_t
     get_four_bits( array_t const &arr, size_t offset ) const noexcept
     {
-      return get_four_bits_impl( arr,
-                                 offset / ullong_bits, offset % ullong_bits );
+      return
+        get_four_bits_impl( arr,
+                            offset / base_t_n_bits, offset % base_t_n_bits );
     }
 
     constexpr
-    ULLONG
+    base_t
     get_four_bits_impl( array_t const &arr,
                         size_t idx, size_t bit_idx ) const noexcept
     {
@@ -55,19 +56,19 @@ namespace detail
     }
 
     constexpr
-    ULLONG
-    h1_get_four_bits( ULLONG v, size_t bit_idx ) const noexcept
-    { return ( v >> ( bit_idx - 3 ) ) & 0xFull; }
+    base_t
+    h1_get_four_bits( base_t v, size_t bit_idx ) const noexcept
+    { return ( v >> ( bit_idx - 3 ) ) & base_t(0xF); }
 
     constexpr
-    ULLONG
+    base_t
     h2_get_four_bits( array_t const &arr,
                       size_t idx, size_t bit_idx ) const noexcept
     {
       return
-        ( ( arr[idx] & ( ( 1ull << (bit_idx+1) ) - 1 ) ) << ( 3 - bit_idx ) )
-        + ( ( idx == 0 ) ? 0ull
-            : ( arr[idx-1] >> ( ullong_bits - ( 3 - bit_idx ) ) ) );
+        (( arr[idx] & ( ( base_t(1) << (bit_idx+1) ) - 1 ) ) << ( 3 - bit_idx ))
+        + ( ( idx == 0 ) ? base_t(0)
+                         : ( arr[idx-1] >> (base_t_n_bits - (3 - bit_idx)) ) );
     }
   }; // struct array_access
 

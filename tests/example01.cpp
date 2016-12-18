@@ -16,15 +16,17 @@
 #include "bitset2.hpp"
 
 template<size_t n_bits>
-using BS2=    Bitset2::bitset2<n_bits>;
-using ULLONG= typename BS2<1>::ULLONG;
+using BS2=      Bitset2::bitset2<n_bits>;
 
 int main()
 {
-  constexpr std::array<ULLONG,2>  ar1{{ ~(0ull), 0xFEDCBAull }};
-  constexpr BS2<128>              b1{ ar1 };
-  constexpr auto                  b1_add=  b1 + b1;
-  constexpr auto                  b1_shft= b1 << 1; // binary shift
+  using bs_128= BS2<128>;
+  using base_t_128= bs_128::base_t;
+  constexpr std::array<base_t_128,2>
+            ar1{{ ~(base_t_128(0)), base_t_128(0xFEDCBA) }};
+  constexpr bs_128                  b1{ ar1 };
+  constexpr auto                    b1_add=  b1 + b1;
+  constexpr auto                    b1_shft= b1 << 1; // binary shift
   static_assert( b1_add == b1_shft, "" );
 
   std::cout << b1.to_hex_string()       // 0000000000fedcbaffffffffffffffff

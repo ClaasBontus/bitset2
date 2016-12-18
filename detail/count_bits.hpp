@@ -23,15 +23,17 @@ namespace detail
 {
 
   /// Returns the number of bits set in val
+  template<class T>
   constexpr
   inline
   size_t
-  count_bits( h_types::ULLONG val, size_t count= 0 ) noexcept
+  count_bits( T val, size_t count= 0 ) noexcept
   {
     return
-      ( val == 0 ) ? count
-                   : count_bits( val & ( val - 1ull ), // clears lowest set bit
-                                 count + 1 );
+      ( val == T(0) )
+               ? count
+               : count_bits( T(val & T( val - T(1) )), // clears lowest set bit
+                             count + 1 );
   }
 
 } // namespace detail

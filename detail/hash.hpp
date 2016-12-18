@@ -18,6 +18,7 @@
 #include <functional>
 #include <array>
 #include <climits>
+#include <algorithm>
 
 
 namespace Bitset2
@@ -26,37 +27,42 @@ namespace detail
 {
 
 
-template<size_t n_ullong>
+template<size_t n_words,class T>
 struct hash_impl
 {
-  using    ULLONG=        h_types::ULLONG;
+  using    base_t=        T;
   using    result_type=   std::size_t;
-  using    array_t=       h_types::array_t<n_ullong>;
+  using    array_t=       typename h_types<T>::template array_t<n_words>;
 
   enum : size_t
-  { size_t_bits=  sizeof(result_type) * CHAR_BIT     ///< #bits in result_type
-  , ullong_bits=  h_types::ullong_bits               ///< #bits in ULLONG
-  , bits_mod=     ullong_bits % size_t_bits
-  , bits_div=     ullong_bits / size_t_bits + ( bits_mod > 0 )
+  { size_t_bits=    sizeof(result_type) * CHAR_BIT   ///< #bits in result_type
+  , base_t_n_bits=  h_types<T>::base_t_n_bits        ///< #bits in T
+  , bits_mod=       base_t_n_bits % size_t_bits
+  , bits_div=       base_t_n_bits / size_t_bits + ( bits_mod > 0 )
+  , size_t_mod=     size_t_bits % base_t_n_bits
+  , size_t_div=     size_t_bits / base_t_n_bits
   };
 
-  enum : bool { easy_bits= ( size_t_bits >= ullong_bits )  };
+  enum : bool
+  { easy_bits=  ( size_t_bits >= base_t_n_bits )
+  , easy_ratio= ( size_t_mod == 0 )
+  };
 
   result_type
   operator()( array_t const & arr ) const noexcept
   {
-    if( n_ullong == 0 ) return 0;
-    if( n_ullong == 1 )
+    if( n_words == 0 ) return 0;
+    if( n_words == 1 )
     {
       if( easy_bits ) return arr[0];
       return to_result_t( arr[0] );
-    } // if n_ullong == 1
+    } // if n_words == 1
 
     return cmpsd_hash( arr );
   }
 
   result_type
-  to_result_t( ULLONG a ) const noexcept
+  to_result_t( base_t a ) const noexcept
   {
     result_type ret_val= 0;
     size_t      shft=    0;
@@ -73,11 +79,25 @@ struct hash_impl
   {
     result_type ret_val= 0;
 
-    for( size_t c= 0; c < n_ullong; ++c )
+    if( easy_ratio )
     {
-      auto const crrnt= easy_bits
-                      ? result_type(arr[c]) : to_result_t(arr[c]);
-      do_combine( ret_val, crrnt, c );
+      for( size_t c= 0; c < n_words; c += size_t_div )
+      {
+        result_type  r= 0;
+        auto const uppr= std::min( n_words, c + size_t_div );
+        for( size_t w= c; w < uppr; ++w )
+             r |= ( result_type(arr[w]) << ((w-c)*base_t_n_bits) );
+        do_combine( ret_val, r, c / size_t_div );
+      }
+    }
+    else
+    {
+      for( size_t c= 0; c < n_words; ++c )
+      {
+        auto const crrnt= easy_bits
+                          ? result_type(arr[c]) : to_result_t(arr[c]);
+        do_combine( ret_val, crrnt, c );
+      }
     }
 
     return ret_val;

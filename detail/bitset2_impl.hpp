@@ -15,6 +15,8 @@
 
 #include "bit_chars.hpp"
 #include "array_add.hpp"
+#include "ullong2array.hpp"
+#include "array2u_long_t.hpp"
 #include <bitset>
 
 
@@ -23,30 +25,37 @@ namespace Bitset2
 namespace detail
 {
 
-template<size_t N>
+template<size_t N,class T>
 class bitset2_impl
 {
-  using b_chars=                     bit_chars<N>;
+  using b_chars=                     bit_chars<N,T>;
+  using h_t=                         h_types<T>;
 
 public:
   enum : size_t { n_array= b_chars::n_array
-                , npos=    h_types::npos };
-  using ULONG=                       typename b_chars::ULONG;
-  using ULLONG=                      typename b_chars::ULLONG;
-  using array_t=                     h_types::array_t<n_array>;
+                , npos=    h_t::npos };
+  using base_t=      T;
+  using ULONG_t=     typename b_chars::ULONG_t;
+  using ULLONG_t=    typename b_chars::ULLONG_t;
+  using array_t=     typename h_types<T>::template array_t<n_array>;
 
 protected:
   enum : size_t
-  { n_ullong=        b_chars::n_ullong
-  , ulong_bits=      b_chars::ulong_bits
-  , ullong_bits=     b_chars::ullong_bits
-  , ulong_max=       b_chars::ulong_max
+  { n_words=         b_chars::n_words
+  , ulong_n_bits=    b_chars::ulong_n_bits
+  , ullong_n_bits=   b_chars::ullong_n_bits
+  , base_t_n_bits=   b_chars::base_t_n_bits
   };
-  enum : ULLONG
+  enum : ULONG_t
+  { ulong_max=       b_chars::ulong_max };
+  enum : base_t
   { low_bit_pattern= b_chars::low_bit_pattern
   , hgh_bit_pattern= b_chars::hgh_bit_pattern
+  , all_one=         b_chars::all_one
   };
 
+
+  /* ----------------------------------------------------------------------- */
   constexpr
   bitset2_impl() noexcept
   {}
@@ -65,41 +74,43 @@ protected:
 
   explicit
   constexpr
-  bitset2_impl( ULLONG v ) noexcept
-  : m_value{ { v & low_bit_pattern } }
+  bitset2_impl( ULLONG_t v ) noexcept
+  : m_value( ullong2array<N,T>()( v ) )
   {}
 
+  //TODO: Allow array of different uint_t
   template<size_t n>
   explicit
   constexpr
-  bitset2_impl( h_types::array_t<n> const & value ) noexcept
-  : m_value( detail::array_funcs<n_array>().copy_and_map(hgh_bit_pattern,value))
+  bitset2_impl( typename h_t::template array_t<n> const & value ) noexcept
+  : m_value( detail::array_funcs<n_array,T>().copy_and_map( hgh_bit_pattern,
+                                                            value ) )
   {}
 
   explicit
   bitset2_impl( const std::bitset<N> &bs ) noexcept
   {
     if( N == 0 ) return;
-    if( n_ullong == 1 )
+    if( ullong_n_bits <= base_t_n_bits && n_words == 1 )
     {
       m_value[0]= bs.to_ullong();
       return;
     }
 
     size_t offset= 0;
-    for( ULLONG ct= 0; ct < n_ullong; ++ct )
+    for( size_t ct= 0; ct < n_words; ++ct )
     {
-      ULLONG  val= 0ull;
+      base_t  val= base_t(0);
       auto const bit_limit=
-      ( ct < n_ullong - 1 ) ? ullong_bits : N - offset;
+                 ( ct < n_words - 1 ) ? base_t_n_bits : N - offset;
       for( size_t bit_ct= 0; bit_ct < bit_limit; ++bit_ct )
       {
         auto const test_bit= offset + bit_limit - bit_ct - 1;
         val <<= 1;
-        if( bs.test( test_bit ) ) val |= 1ull;
+        if( bs.test( test_bit ) ) val |= base_t(1);
       } // for bit_ct
       m_value[ct]= val;
-      offset += ullong_bits;
+      offset += base_t_n_bits;
     } // for ct
   } // bitset2_impl( const std::bitset<N> &bs )
 
@@ -129,6 +140,7 @@ protected:
                                            "string submitted to constructor" );
     } // for bit_ct
   }
+  /* ----------------------------------------------------------------------- */
 
 
   //**********************************************************
@@ -146,7 +158,7 @@ protected:
   constexpr
   bool
   test_noexcept( size_t bit ) const noexcept
-  { return m_value[bit / ullong_bits] & ( 1ull << ( bit % ullong_bits ) ); }
+  { return m_value[bit / base_t_n_bits] & ( T(1) << ( bit % base_t_n_bits ) ); }
 
   bitset2_impl &
   set( size_t bit, bool value= true )
@@ -163,7 +175,7 @@ protected:
     if( N > 0 )
     {
       size_t c= 0;
-      for( ; c < n_ullong - 1; ++c ) m_value[c]= ~(0ull);
+      for( ; c < n_words - 1; ++c ) m_value[c]= ~base_t(0);
       m_value[c]= hgh_bit_pattern;
     }
     return *this;
@@ -172,7 +184,7 @@ protected:
   bitset2_impl &
   reset() noexcept
   {
-    for( size_t c= 0; c < n_array; ++c ) m_value[c]= 0ull;
+    for( size_t c= 0; c < n_array; ++c ) m_value[c]= base_t(0);
     return *this;
   }
 
@@ -180,14 +192,14 @@ protected:
   test_set( size_t bit, bool value= true )
   {
     if( bit >= N  )
-        throw std::out_of_range( "bitset2: Test-Setting of bit out of range" );
+        throw std::out_of_range( "bitset2: test_set out of range" );
     return test_set_noexcept( bit, value );
   } // test_set
 
   bitset2_impl &
   flip_noexcept( size_t bit ) noexcept
   {
-    m_value[bit / ullong_bits] ^= ( 1ull << ( bit % ullong_bits ) );
+    m_value[bit / base_t_n_bits] ^= ( base_t(1) << ( bit % base_t_n_bits ) );
     return *this;
   }
 
@@ -205,7 +217,7 @@ protected:
     if( N > 0 )
     {
       size_t c= 0;
-      for( ; c < n_ullong - 1; ++c ) m_value[c] ^= ~(0ull);
+      for( ; c < n_words - 1; ++c ) m_value[c] ^= ~base_t(0);
       m_value[c] ^= hgh_bit_pattern;
     }
     return *this;
@@ -218,27 +230,27 @@ public:
   { return m_value; }
 
   constexpr
-  ULONG
+  ULONG_t
   to_ulong() const
   {
+    using a2l= array2u_long_t<N,T,ULONG_t>;
     return  ( N == 0 ) ? 0ul
-            : ( N > ulong_bits
-                && ( m_value[0] > ulong_max
-                     || count() != count_bits(m_value[0]) ) )
+            : a2l().check_overflow( m_value )
               ? throw std::overflow_error( "Cannot convert bitset2 "
                                            "to unsigned long" )
-              : ULONG( m_value[0] );
+              : a2l()( m_value );
   } // to_ulong
 
   constexpr
-  ULLONG
+  ULLONG_t
   to_ullong() const
   {
+    using a2l= array2u_long_t<N,T,ULLONG_t>;
     return  ( N == 0 ) ? 0ull
-            : ( n_ullong > 1 && count() != count_bits(m_value[0]) )
+            : a2l().check_overflow( m_value )
               ? throw std::overflow_error( "Cannot convert bitset2 "
                                            "to unsigned long long" )
-              : m_value[0];
+              : a2l()( m_value );
   } // to_ullong
 
   constexpr
@@ -253,16 +265,18 @@ public:
   void
   set_noexcept( size_t bit, bool value= true ) noexcept
   {
-    if( value ) m_value[bit / ullong_bits] |=  (1ull << ( bit % ullong_bits ));
-    else        m_value[bit / ullong_bits] &= ~(1ull << ( bit % ullong_bits ));
+    if( value ) m_value[bit / base_t_n_bits]
+                   |=  base_t(   base_t(1) << ( bit % base_t_n_bits )  );
+    else        m_value[bit / base_t_n_bits]
+                   &=  base_t(~( base_t(1) << ( bit % base_t_n_bits ) ));
   }
 
   bool
   test_set_noexcept( size_t bit, bool value= true ) noexcept
   {
-    auto const dv= bit / ullong_bits;
-    auto const md= bit % ullong_bits;
-    auto const pttrn= ( 1ull << md );
+    auto const dv= bit / base_t_n_bits;
+    auto const md= bit % base_t_n_bits;
+    auto const pttrn= ( base_t(1) << md );
     auto const ret_val= bool( m_value[dv] & pttrn );
 
     if( value ) m_value[dv] |=  pttrn;
@@ -274,7 +288,7 @@ public:
   constexpr
   bool
   none() const noexcept
-  { return detail::array_funcs<n_array>().none( m_value ); }
+  { return detail::array_funcs<n_array,T>().none( m_value ); }
 
   constexpr
   bool
@@ -284,12 +298,12 @@ public:
   constexpr
   bool
   all() const noexcept
-  { return ( N > 0 ) && detail::array_ops<N>( 0 ).all( m_value ); }
+  { return ( N > 0 ) && detail::array_ops<N,T>( 0 ).all( m_value ); }
 
   constexpr
   size_t
   count() const noexcept
-  { return detail::array_funcs<n_array>().count( m_value ); }
+  { return detail::array_funcs<n_array,T>().count( m_value ); }
 
   /// \brief Returns index of first (least significant) bit set.
   /// Returns npos if all bits are zero.
@@ -297,7 +311,7 @@ public:
   size_t
   find_first() const noexcept
   {
-    return detail::array_funcs<n_array>().idx_lsb_set( m_value, m_value[0], 0 );
+    return detail::array_funcs<n_array,T>().idx_lsb_set(m_value, m_value[0], 0);
   }
 
   /// \brief Returns index of next (> idx) bit set.
@@ -311,17 +325,17 @@ public:
       ? throw std::out_of_range( "bitset2: find_next index out of range" )
       : idx + 1 == N
         ? npos
-        : detail::array_funcs<n_array>()
+        : detail::array_funcs<n_array,T>()
             .idx_lsb_set( m_value,
-                          m_value[(idx+1) / ullong_bits]
-                            & ull_left_shift( ~0ull, (idx+1) % ullong_bits ),
-                          (idx+1) / ullong_bits );
+                          base_t( m_value[(idx+1) / base_t_n_bits]
+                            & ce_left_shift(T(~T(0)),(idx+1) % base_t_n_bits) ),
+                          (idx+1) / base_t_n_bits );
   }
 
   constexpr
   bool
   operator==( bitset2_impl const &v2 ) const noexcept
-  { return detail::array_funcs<n_array>().equal( m_value, v2.m_value ); }
+  { return detail::array_funcs<n_array,T>().equal( m_value, v2.m_value ); }
 
   constexpr
   bool
@@ -331,7 +345,7 @@ public:
   constexpr
   bool
   operator<( bitset2_impl const &v2 ) const noexcept
-  { return detail::array_funcs<n_array>().less_than(m_value, v2.m_value); }
+  { return detail::array_funcs<n_array,T>().less_than( m_value, v2.m_value ); }
 
   constexpr
   bool
@@ -341,7 +355,7 @@ public:
   constexpr
   bool
   operator>( bitset2_impl const &v2 ) const noexcept
-  { return detail::array_funcs<n_array>().less_than(v2.m_value, m_value); }
+  { return detail::array_funcs<n_array,T>().less_than(v2.m_value, m_value); }
 
   constexpr
   bool
@@ -353,7 +367,7 @@ public:
   {
     using b_t= std::bitset<N>;
     if( N == 0 ) return b_t{};
-    if( n_ullong == 1 ) return b_t( to_ullong() );
+    if( n_words == 1 ) return b_t( to_ullong() );
 
     b_t  ret_val;
     for( size_t ct= 0; ct < N; ++ct ) ret_val[ct]= operator[](ct);
@@ -361,7 +375,7 @@ public:
     return ret_val;
   }
 private:
-  array_t   m_value= gen_empty_array<n_array>();
+  array_t   m_value= (detail::gen_empty_array<n_array,T>)();
 }; // class bitset2_impl
 
 

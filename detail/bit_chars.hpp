@@ -21,33 +21,38 @@ namespace Bitset2
 namespace detail
 {
 
-  template<size_t N>
+  template<size_t N,class T>
   struct bit_chars
   {
-      using ULONG=  h_types::ULONG;
-      using ULLONG= h_types::ULLONG;
+      using h_t=      h_types<T>;
+      using ULONG_t=  typename h_t::ULONG_t;
+      using ULLONG_t= typename h_t::ULLONG_t;
+      using base_t=   T;
       //
       enum : size_t
-      { n_bits=       N
-      , ulong_bits=   h_types::ulong_bits                ///< #bits in ULONG
-      , ullong_bits=  h_types::ullong_bits               ///< #bits in ULLONG
-      , ulong_max=    ULONG_MAX
-      , div_val=      n_bits / ullong_bits
-      , mod_val=      n_bits % ullong_bits
-      , n_ullong=     mod_val ? div_val + 1 : div_val    ///< #ULLONG required
-      , n_array=      ( n_ullong == 0 ) ? 1 : n_ullong   ///< #ULLONG used
+      { n_bits=         N
+      , ulong_n_bits=   h_t::ulong_n_bits                ///< #bits in ULONG_t
+      , ullong_n_bits=  h_t::ullong_n_bits               ///< #bits in ULLONG_t
+      , base_t_n_bits=  h_t::base_t_n_bits               ///< #bits in T
+      , div_val=        n_bits / base_t_n_bits
+      , mod_val=        n_bits % base_t_n_bits
+      , n_words=        mod_val ? div_val + 1 : div_val  ///< #words required
+      , n_array=        ( n_words == 0 ) ? 1 : n_words   ///< #words used
       };
-      enum : ULLONG
-      { low_bit_pattern=                           ///< Mask for idx==0
-              n_bits == 0 ? 0
+      enum : ULONG_t
+      { ulong_max=      ULONG_MAX };
+      enum : base_t
+      { all_one= base_t(~base_t(0))
+      , low_bit_pattern=                         ///< Mask for idx==0
+              n_bits == 0 ? base_t(0)
               : ( div_val > 0 || mod_val == 0 )
-                ? (~(0ull))
-                : ull_right_shift( ~(0ull), ullong_bits - mod_val )
-      , hgh_bit_pattern=                           ///< Mask for idx+1==n_ullong
-              n_bits == 0 ? 0
+                ? all_one
+                : ce_right_shift( all_one, base_t_n_bits - mod_val )
+      , hgh_bit_pattern=                        ///< Mask for idx+1==n_words
+              n_bits == 0 ? base_t(0)
               : mod_val == 0
-                ? (~(0ull))
-                : ull_right_shift( ~(0ull), ullong_bits - mod_val )
+                ? all_one
+                : ce_right_shift( all_one, base_t_n_bits - mod_val )
       };
   }; // struct bit_chars
 

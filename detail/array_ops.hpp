@@ -22,32 +22,36 @@ namespace Bitset2
 namespace detail
 {
 
-  template<size_t N>
+  template<size_t N,class T>
   struct array_ops
   {
-    using this_t=                      array_ops<N>;
-    using b_chars=                     bit_chars<N>;
-    using ULLONG=                      h_types::ULLONG;
-    enum : size_t {   ullong_bits=     b_chars::ullong_bits
-                    , n_ullong=        b_chars::n_ullong
+    using base_t=                      T;
+    using this_t=                      array_ops<N,T>;
+    using b_chars=                     bit_chars<N,T>;
+    enum : size_t {   base_t_n_bits=   b_chars::base_t_n_bits
+                    , n_words=         b_chars::n_words
                     , n_array=         b_chars::n_array
                     , mod_val=         b_chars::mod_val
-                    , n_m_mod=         mod_val == 0 ? 0 : ullong_bits - mod_val
+                    , n_m_mod=         mod_val == 0 ? 0 : base_t_n_bits-mod_val
                   };
-    enum : ULLONG {   hgh_bit_pattern= b_chars::hgh_bit_pattern };
-    using array_t=                     h_types::array_t<n_array>;
-    using zero_array_t=                h_types::array_t<0>;
+    enum : base_t
+    {   hgh_bit_pattern= b_chars::hgh_bit_pattern
+    ,   all_one=         b_chars::all_one };
+    using array_t=            typename h_types<T>::template array_t<n_array>;
+    using zero_array_t=       typename h_types<T>::template array_t<0>;
 
     constexpr
     array_ops( size_t n_shift ) noexcept
     : m_n_shift_mod( n_shift % N )
-    , m_shft_div( n_shift / ullong_bits )
-    , m_shft_mod( n_shift % ullong_bits )
-    , m_shft_leftright_shift( ullong_bits-(n_shift % ullong_bits) )
-    , m_shft_left_pattern( ull_left_shift( ~(0ull),
-                                           ullong_bits-(n_shift % ullong_bits)))
-    , m_shft_right_pattern( ull_right_shift( ~(0ull),
-                                             ullong_bits-(n_shift%ullong_bits)))
+    , m_shft_div( n_shift / base_t_n_bits )
+    , m_shft_mod( n_shift % base_t_n_bits )
+    , m_shft_leftright_shift( base_t_n_bits-(n_shift % base_t_n_bits) )
+    , m_shft_left_pattern( ce_left_shift( T(~T(0)),
+                                          base_t_n_bits
+                                             - (n_shift % base_t_n_bits) ))
+    , m_shft_right_pattern( ce_right_shift( T(~T(0)),
+                                            base_t_n_bits
+                                             - (n_shift % base_t_n_bits) ))
     {}
 
     constexpr
@@ -60,41 +64,45 @@ namespace detail
     shift_right( array_t const &arr ) const noexcept
     { return shift_right_impl( arr, std::make_index_sequence<n_array>() ); }
 
+    /// Used for <<= operator. Separate implementation for better performance.
     void
     shift_left_assgn( array_t &arr ) const noexcept
     {
-      for( size_t c= n_ullong; c > 0; )
+      for( size_t c= n_words; c > 0; )
       {
         --c;
         if( c >= m_shft_div )
         {
           auto const c2= c - m_shft_div;
-          ULLONG const v1= arr[c2] << m_shft_mod;
-          ULLONG const v2=   ( c2 == 0 ) ? 0ull
-                           : ull_right_shift( arr[c2-1] & m_shft_left_pattern,
-                                              m_shft_leftright_shift );
-          arr[c]= v1 | v2;
+          base_t const v1= arr[c2] << m_shft_mod;
+          base_t const v2=
+            c2 == 0 ? base_t(0)
+                    : ce_right_shift( base_t(arr[c2-1] & m_shft_left_pattern),
+                                      m_shft_leftright_shift );
+          arr[c]= base_t( v1 | v2 );
         }
-        else arr[c]= 0ull;
+        else arr[c]= base_t(0);
       } // for c
       arr[n_array-1] &= hgh_bit_pattern;
     } // shift_left_assgn
 
+    /// Used for >>= operator. Separate implementation for better performance.
     void
     shift_right_assgn( array_t &arr ) const noexcept
     {
-      for( size_t c= 0; c < n_ullong; ++c )
+      for( size_t c= 0; c < n_words; ++c )
       {
         auto const c2= c + m_shft_div;
-        if( c2 < n_ullong )
+        if( c2 < n_words )
         {
-          ULLONG const v1= arr[c2] >> m_shft_mod;
-          ULLONG const v2=   ( c2 + 1 >= n_ullong ) ? 0ull
-                           : ull_left_shift( arr[c2+1] & m_shft_right_pattern,
-                                             m_shft_leftright_shift );
+          base_t const v1= arr[c2] >> m_shft_mod;
+          base_t const v2=
+            ( c2 + 1 >= n_words ) ? base_t(0)
+                  : ce_left_shift( base_t( arr[c2+1] & m_shft_right_pattern ),
+                                           m_shft_leftright_shift );
           arr[c]= v1 | v2;
         }
-        else arr[c]= 0ull;
+        else arr[c]= base_t(0);
       } // for c
       arr[n_array-1] &= hgh_bit_pattern;
     } // shift_right_assgn
@@ -106,14 +114,14 @@ namespace detail
     {
       return
         ( n_array == 1 )
-          ? array_t{{ (   ( arr[0] << m_n_shift_mod )
-                        | ( ull_right_shift( arr[0], N - m_n_shift_mod ) )
-                      ) & hgh_bit_pattern  }}
+          ? array_t{{ base_t((   base_t( arr[0] << m_n_shift_mod )
+                               | ( ce_right_shift( arr[0], N - m_n_shift_mod ) )
+                             ) & hgh_bit_pattern ) }}
           : rotate_left_impl( arr,
-                              array_ops<N>(     m_n_shift_mod ),
-                              array_ops<N>( N - m_n_shift_mod ),
+                              array_ops<N,T>(     m_n_shift_mod ),
+                              array_ops<N,T>( N - m_n_shift_mod ),
                               std::make_index_sequence<n_array>() );
-    }
+    } // rotate_left
 
     constexpr
     array_t
@@ -123,33 +131,35 @@ namespace detail
     constexpr
     bool
     all( array_t const &arr ) const noexcept
-    { return ( N > 0 ) && all_impl( n_ullong - 1, arr ); }
+    { return ( N > 0 ) && all_impl( n_words - 1, arr ); }
 
 
+    /// Used for ++ operator.
     void
     increment( array_t &arr ) const noexcept
     {
       if( N == 0 ) return;
 
       size_t  c= 0;
-      for( ; c + 1 < n_ullong; ++c )
+      for( ; c + 1 < n_words; ++c )
       {
-        if( ( ++arr[c] ) != 0ull ) return;
+        if( ( ++arr[c] ) != base_t(0) ) return;
       }
       ++arr[c];
       arr[c] &= hgh_bit_pattern;
     } // increment
 
 
+    /// Used for -- operator.
     void
     decrement( array_t &arr ) const noexcept
     {
       if( N == 0 ) return;
 
       size_t  c= 0;
-      for( ; c + 1 < n_ullong; ++c )
+      for( ; c + 1 < n_words; ++c )
       {
-        if( ( arr[c]-- ) != 0ull ) return;
+        if( ( arr[c]-- ) != base_t(0) ) return;
       }
       --arr[c];
       arr[c] &= hgh_bit_pattern;
@@ -161,7 +171,7 @@ namespace detail
     reverse( array_t const &arr ) const noexcept
     {
       return   n_array == 1
-             ? array_t{{ reverse_bits<ULLONG>()( arr[0] ) >> n_m_mod }}
+             ? array_t{{ base_t( reverse_bits<base_t>()(arr[0]) >> n_m_mod ) }}
              : reverse_impl( arr, std::make_index_sequence<n_array>() );
     } // reverse
 
@@ -181,8 +191,8 @@ namespace detail
     bool
     h_all( size_t idx, array_t const &arr ) const noexcept
     {
-      return ( idx + 1 ==  n_ullong ) ? ( arr[idx] == hgh_bit_pattern )
-                                      : ( arr[idx] == (~(0ull) ) );
+      return ( idx + 1 ==  n_words ) ? ( arr[idx] == hgh_bit_pattern )
+                                     : ( arr[idx] == all_one );
     }
 
 
@@ -194,28 +204,28 @@ namespace detail
     { return {{ h_shift_left( S, arr )... }};  }
 
     constexpr
-    ULLONG
+    base_t
     h_shift_left( size_t idx, array_t const &arr ) const noexcept
     {
       return   h_shift_left1( idx, arr )
-             & ( ( idx+1 == n_ullong ) ?  hgh_bit_pattern : (~(0ull)) );
+             & ( ( idx+1 == n_words ) ?  hgh_bit_pattern : all_one );
     }
 
     constexpr
-    ULLONG
+    base_t
     h_shift_left1( size_t idx, array_t const &arr ) const noexcept
     {
-      return   ( idx >= n_ullong || idx < m_shft_div ) ? 0ull
-             : ( arr[idx-m_shft_div] << m_shft_mod )
-               | h_shift_left_rem( idx - m_shft_div, arr );
+      return   ( idx >= n_words || idx < m_shft_div ) ? base_t(0)
+             : base_t( ( arr[idx-m_shft_div] << m_shft_mod )
+                       | h_shift_left_rem( idx - m_shft_div, arr ) );
     }
 
     constexpr
-    ULLONG
+    base_t
     h_shift_left_rem( size_t idx, array_t const &arr ) const noexcept
     {
-      return   ( idx == 0 ) ? 0ull
-             : ull_right_shift( arr[idx-1] & m_shft_left_pattern,
+      return   ( idx == 0 ) ? base_t(0)
+             : ce_right_shift( base_t( arr[idx-1] & m_shft_left_pattern ),
                                 m_shft_leftright_shift );
     }
 
@@ -228,21 +238,21 @@ namespace detail
     { return {{ h_shift_right( S, arr )... }};  }
 
     constexpr
-    ULLONG
+    base_t
     h_shift_right( size_t idx, array_t const &arr ) const noexcept
     {
-      return   ( idx + m_shft_div >= n_ullong ) ? 0ull
-             : (   ( arr[idx+m_shft_div] >> m_shft_mod )
-                 | h_shift_right_rem( idx + m_shft_div, arr ) );
+      return   ( idx + m_shft_div >= n_words ) ? base_t(0)
+             : base_t(   ( arr[idx+m_shft_div] >> m_shft_mod )
+                       | h_shift_right_rem( idx + m_shft_div, arr ) );
     }
 
     constexpr
-    ULLONG
+    base_t
     h_shift_right_rem( size_t idx, array_t const &arr ) const noexcept
     {
-      return   ( idx + 1 >= n_ullong ) ? 0ull
-             : ull_left_shift( arr[idx+1] & m_shft_right_pattern,
-                               m_shft_leftright_shift );
+      return   ( idx + 1 >= n_words ) ? base_t(0)
+             : ce_left_shift( base_t( arr[idx+1] & m_shft_right_pattern ),
+                              m_shft_leftright_shift );
     }
 
 
@@ -257,8 +267,8 @@ namespace detail
       return
         {{ ( S > lft.m_shft_div ? lft.h_shift_left( S, arr )
              : S ==  lft.m_shft_div
-               ?   lft.h_shift_left(  lft.m_shft_div, arr )
-                 | rgt.h_shift_right( lft.m_shft_div, arr )
+               ? base_t( lft.h_shift_left(  lft.m_shft_div, arr )
+                         | rgt.h_shift_right( lft.m_shft_div, arr ) )
                : rgt.h_shift_right( S, arr ) )... }};
     } // rotate_left_impl
 
@@ -270,12 +280,12 @@ namespace detail
     { return {{ h_flip( S, arr )... }}; }
 
     constexpr
-    ULLONG
+    base_t
     h_flip( size_t idx, array_t const &arr ) const noexcept
     {
-      return   ( idx >= n_ullong ) ? 0ull
+      return   ( idx >= n_words ) ? base_t(0)
              :   ( ~arr[idx] )
-               & ( (idx+1 == n_ullong) ? hgh_bit_pattern : ~(0ull) );
+               & ( (idx+1 == n_words) ? hgh_bit_pattern : all_one );
     }
 
 
@@ -286,21 +296,21 @@ namespace detail
     { return {{ h_reverse( S, arr )... }}; }
 
     constexpr
-    ULLONG
+    base_t
     h_reverse( size_t idx, array_t const &arr ) const noexcept
     {
-      return   idx + 1 == n_ullong
-             ? reverse_bits<ULLONG>()( arr[0] ) >> n_m_mod
-             : reverse_bits<ULLONG>()( h2_reverse( idx, arr ) );
+      return   idx + 1 == n_words
+             ? base_t( reverse_bits<base_t>()( arr[0] ) >> n_m_mod )
+             : reverse_bits<base_t>()( h2_reverse( idx, arr ) );
     }
 
     constexpr
-    ULLONG
+    base_t
     h2_reverse( size_t idx, array_t const &arr ) const noexcept
     {
-      return   mod_val == 0 ? arr[n_ullong-idx-1]
-             :   ( arr[n_ullong-idx-1] << n_m_mod )
-               | ( arr[n_ullong-idx-2] >> mod_val );
+      return   mod_val == 0 ? arr[n_words-idx-1]
+             : base_t(   ( arr[n_words-idx-1] << n_m_mod )
+                       | ( arr[n_words-idx-2] >> mod_val ) );
     }
 
 
@@ -308,8 +318,8 @@ namespace detail
     size_t const     m_shft_div;
     size_t const     m_shft_mod;
     size_t const     m_shft_leftright_shift;
-    ULLONG const     m_shft_left_pattern;
-    ULLONG const     m_shft_right_pattern;
+    base_t const     m_shft_left_pattern;
+    base_t const     m_shft_right_pattern;
 
   }; // struct array_ops
 

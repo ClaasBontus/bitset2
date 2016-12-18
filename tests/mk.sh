@@ -24,3 +24,7 @@ $cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto -D_GLIBCXX_USE_NANOSLEEP 
 p=example01
 echo "Compiling $p"
 $cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p
+
+p=test_ullong2array
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -I../detail -fdiagnostics-color=auto $p.cpp -o $p

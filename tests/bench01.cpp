@@ -34,8 +34,8 @@ template<size_t N>
 vec_t<N>
 gen_bs_vec( size_t n )
 {
-  std::vector<t1<N> >    ret_val;
-  gen_random_bitset2<N>  gen_rand;
+  std::vector<t1<N> >           ret_val;
+  gen_random_bitset2<N,ULLONG>  gen_rand;
   ret_val.reserve( n );
   for( size_t c= 0; c < n; ++c ) ret_val.push_back( gen_rand() );
 
