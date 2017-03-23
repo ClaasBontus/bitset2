@@ -24,7 +24,7 @@ namespace detail
 
   template<size_t N,size_t it_n,class T>
   struct array_add_base
-  {;
+  {
     using base_t=                      T;
     using b_chars=                     bit_chars<N,T>;
     enum : size_t {   n_array=         b_chars::n_array };
