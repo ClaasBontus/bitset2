@@ -54,6 +54,9 @@ protected:
   , all_one=         b_chars::all_one
   };
 
+  template<size_t n_arr_src, class Tsrc>
+  using a2a= detail::array2array<n_array, n_arr_src,T,Tsrc>;
+
 
   /* ----------------------------------------------------------------------- */
   constexpr
@@ -78,13 +81,11 @@ protected:
   : m_value( ullong2array<N,T>()( v ) )
   {}
 
-  //TODO: Allow array of different uint_t
-  template<size_t n>
+  template<size_t n,class Tsrc>
   explicit
   constexpr
-  bitset2_impl( typename h_t::template array_t<n> const & value ) noexcept
-  : m_value( detail::array_funcs<n_array,T>().copy_and_map( hgh_bit_pattern,
-                                                            value ) )
+  bitset2_impl( std::array<Tsrc,n> const & value ) noexcept
+  : m_value( a2a<n,Tsrc>()( hgh_bit_pattern, value ) )
   {}
 
   explicit

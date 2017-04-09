@@ -352,13 +352,15 @@ int main()
   std::cout << "b_from_s_arr01c= " << b_from_s_arr01c.to_hex_string() << "\n";
   std::cout << "b_from_s_arr01d= " << b_from_s_arr01d.to_hex_string() << "\n";
 
-  constexpr bitset2<24>           b24_empty{ 0ull };
-  constexpr bitset2<24>           b24_full= ~b24_empty;
-  constexpr bitset2<23>           b23_a= convert_to<23>( b24_full );
-  constexpr bitset2<25>           b25_a= convert_to<25>( b24_full );
-  std::cout << "b24_full=  "  << b24_full << "\n";
-  std::cout << "b23_a=      " << b23_a << "\n";
-  std::cout << "b25_a=    "   << b25_a << "\n";
+  constexpr bitset2<24>      b24_empty{ 0ull };
+  constexpr bitset2<24>      b24_full= ~b24_empty;
+  constexpr bitset2<23>      b23_a=        convert_to<23>( b24_full );
+  constexpr bitset2<25>      b25_a=        convert_to<25>( b24_full );
+  constexpr auto             b24_full_ui8= convert_to<24,uint8_t>( b24_full );
+  std::cout << "b24_full=     "  << b24_full << "\n";
+  std::cout << "b23_a=         " << b23_a << "\n";
+  std::cout << "b25_a=       "   << b25_a << "\n";
+  std::cout << "b24_full_ui8= "  << b24_full_ui8 << '\n';
 
   bitset2<7>    b7_a( "1010101" );
   bitset2<7>    b7_b( "1000101" );
@@ -394,9 +396,13 @@ int main()
 
   bitset2<16>  b16_a( "0000101000011111" );
   bitset2<16>  b16_b;
+  hex_params<> hp1;
+  hp1.aCh=           'A';
+  hp1.leadingZeroes= false;
+  hp1.prefix=        "0x";
   std::cout << '\n'
     << b16_a.to_hex_string() << '\n'                                    // 0a1f
-    << b16_a.to_hex_string( hex_params<>{'0', 'A', false, true, "0x"})  // 0xA1F
+    << b16_a.to_hex_string( hp1 )                                       // 0xA1F
     << '\n'
     << b16_b.to_hex_string() << '\n'                                    // 0000
     << b16_b.to_hex_string( hex_params<>{'0', 'a', false, false, "0X"}) // 0X

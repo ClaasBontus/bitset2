@@ -14,6 +14,7 @@
 #ifndef BITSET2_GEN_RANDOMS_CB_HPP
 #define BITSET2_GEN_RANDOMS_CB_HPP
 
+#include "../bitset2.hpp"
 #include <random>
 #include <climits>
 #include <array>

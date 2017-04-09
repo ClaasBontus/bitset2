@@ -22,6 +22,8 @@
 #include "detail/array_funcs.hpp"
 #include "detail/array_add.hpp"
 #include "detail/array_ops.hpp"
+#include "detail/array_complement2.hpp"
+#include "detail/array2array.hpp"
 #include "detail/bitset2_impl.hpp"
 
 #include <bitset>
@@ -123,12 +125,11 @@ public:
   : detail::bitset2_impl<N,T>( v )
   {}
 
-  template<size_t n>
+  template<size_t n,class Tsrc>
   explicit
   constexpr
-  bitset2( typename
-           detail::h_types<T>::template array_t<n> const & value
-         ) noexcept : detail::bitset2_impl<N,T>( value )
+  bitset2( std::array<Tsrc,n> const & value ) noexcept
+  : detail::bitset2_impl<N,T>( value )
   {}
 
   template< class CharT, class Traits, class Alloc >
@@ -210,6 +211,14 @@ public:
   reverse() noexcept
   {
     this->get_data()= detail::array_ops<N,T>( 0 ).reverse( this->data() );
+    return *this;
+  }
+
+  /// Computes two's complement
+  bitset2 &
+  complement2() noexcept
+  {
+    detail::array_complement2<N,T>().comp2_assgn( this->get_data() );
     return *this;
   }
 
@@ -418,7 +427,27 @@ reverse( bitset2<N,T> const & bs ) noexcept
 { return bitset2<N,T>( detail::array_ops<N,T>( 0 ).reverse( bs.data() ) ); }
 
 
-//TODO: Treat different base_t
+/// Computes the two's complement
+template<size_t N, class T>
+constexpr
+bitset2<N,T>
+complement2( bitset2<N,T> const & bs ) noexcept
+{ return bitset2<N,T>( detail::array_complement2<N,T>().comp2(bs.data()) ); }
+
+
+/// Converts an M-bit bitset2 to an N-bit bitset2.
+template<size_t N,class T1,size_t M, class T2>
+constexpr
+bitset2<N,T1>
+convert_to( bitset2<M,T2> const & bs ) noexcept
+{
+  using a2a=
+    detail::array2array<bitset2<N,T1>::n_array,bitset2<M,T2>::n_array,T1,T2>;
+  return
+    bitset2<N,T1>(a2a()(detail::bit_chars<N,T1>::hgh_bit_pattern, bs.data()));
+}
+
+
 /// Converts an M-bit bitset2 to an N-bit bitset2.
 template<size_t N,size_t M, class T>
 constexpr

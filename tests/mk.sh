@@ -1,6 +1,11 @@
 cc=g++-5
 #cc=clang++
 
+
+p=test_array2array
+echo "Compiling $p"
+$cc -O2 -Wall -std=c++1y -I.. -I../detail -fdiagnostics-color=auto $p.cpp -o $p
+
 p=tests01
 echo "Compiling $p"
 $cc -O2 -Wall -std=c++1y -I.. -fdiagnostics-color=auto $p.cpp -o $p

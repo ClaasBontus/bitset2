@@ -186,7 +186,7 @@ namespace detail
                          std::index_sequence<S2...> ) const noexcept
       {
         return {{ arr[S1]..., zeroes[S2]...,
-                 base_t(( take_all ? arr[n_array-1] : base_t(0) ) & pttrn) }};
+                  base_t(( take_all ? arr[n_array-1] : base_t(0) ) & pttrn) }};
       }
 
 

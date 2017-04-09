@@ -19,6 +19,9 @@
 #include <iostream>
 
 #define TESTMANY(F) \
+    F <7  >(); \
+    F <8  >(); \
+    F <9  >(); \
     F <63 >(); \
     F <64 >(); \
     F <65 >(); \
@@ -33,6 +36,9 @@
     F <257>();
 
 #define TESTMANY2(F,T,S) \
+    F <7,  T>(S); \
+    F <8,  T>(S); \
+    F <9,  T>(S); \
     F <63, T>(S); \
     F <64, T>(S); \
     F <65, T>(S); \
@@ -379,6 +385,7 @@ test_add( const char * type_str )
 
   gen_random_bitset2<N,T>  gen_rand;
   dummy_add<N,T>           adder;
+  t1<N,T> const            zero;
   t1<N,T> const            one{{ T(1) }};
   t1<N,T> const            all= t1<N,T>().set();
 
@@ -423,14 +430,14 @@ test_add( const char * type_str )
     auto const  cmp2= adder.compare( add3, bs3.data() );
     auto const  cmp3= adder.compare( add4, bs4.data() );
     auto const  cmp4= adder.compare( add2, bs5.data() );
-    if( !cmp3 )
-      std::cout << "  " << bs1  << '\n'
-                << "+ " << all  << "    --" << bs1
-                << "\n= " << t1<N,T>(add4) << "    = " << bs4 << "\n";
+
+    auto const  exp_zero= bs1 + (~bs1 + one);
+
     assert( cmp1 );
     assert( cmp2 );
     assert( cmp3 );
     assert( cmp4 );
+    assert( exp_zero == zero );
   } // for c
 } // test_add
 
@@ -686,6 +693,24 @@ test_convert( char const * type_str )
     auto const  bs2e= Bitset2::convert_to<N>(   bs2d );
     assert( bs2c == bs2a );
     assert( bs2e == bs1 );
+
+    auto const bs3a= Bitset2::convert_to<N,uint8_t>( bs1 );
+    auto const bs3b= Bitset2::convert_to<N,T>( bs3a );
+    auto const bs3c= Bitset2::convert_to<N,uint32_t>( bs3a );
+    auto const bs4a= Bitset2::convert_to<N,uint64_t>( bs1 );
+    auto const bs4b= Bitset2::convert_to<N,T>( bs4a );
+    auto const bs5a= Bitset2::convert_to<N,uint64_t>( bs3a );
+    auto const bs5b= Bitset2::convert_to<N,T>( bs5a );
+    auto const bs5c= Bitset2::convert_to<N,uint32_t>( bs5a );
+    assert( bs3b == bs1 );
+    assert( bs4b == bs1 );
+    assert( bs5b == bs1 );
+    assert( bs3c == bs5c );
+
+    const Bitset2::bitset2<N,uint8_t>   bs_1a{ bs1.data() };
+    const Bitset2::bitset2<N,uint64_t>  bs_1b{ bs1.data() };
+    assert( bs_1a == bs3a );
+    assert( bs_1b == bs4a );
   } // for c
 } // test_convert
 
@@ -712,25 +737,65 @@ test_compare( char const * type_str )
 
   for( size_t c= 0; c < n_loops; ++c )
   {
-    auto const  bs1=   gen_rand();
-    if( bs1 != ce_bs2 )
+    auto const  bs1= gen_rand();
+    auto        bs2= bs1;
+    auto const  bs3= bs1;
+    --bs2;
+    if( bs1 != ce_bs1 )
     {
-      auto bs2= bs1;
-      auto bs3= bs1;
-      --bs2;
       assert( bs2 <  bs1 );
       assert( bs2 <= bs1 );
       assert( bs1 >  bs2 );
       assert( bs1 >= bs1 );
-      assert( bs3 <= bs1 );
-      assert( bs3 >= bs1 );
     }
     else
     {
-      assert( bs1 == ce_bs2 );
+      assert( bs1 == ce_bs1 );
     }
+    assert( bs3 <= bs1 );
+    assert( bs3 >= bs1 );
   } // for c
 } // test_compare
+
+
+
+
+template<size_t N,class T>
+void
+test_complement2( char const * type_str )
+{
+  std::cout << "Entering test_complement2 N= " << N << " type= " << type_str << "\n";
+
+  constexpr t1<N,T>  zero( 0ull );
+  constexpr auto     allset= ~zero;
+  auto one=          zero;
+  ++one;
+
+  constexpr auto     ce_bs1= Bitset2::complement2( zero );
+  constexpr auto     ce_bs2= Bitset2::complement2( allset );
+  auto               bs1= zero;
+  auto               bs2= allset;
+  bs1.complement2();
+  bs2.complement2();
+  static_assert( ce_bs1 == zero, "" );
+  assert( bs1 == zero );
+  assert( bs2 == one );
+  assert( ce_bs2 == one );
+
+  gen_random_bitset2<N,T>  gen_rand;
+
+  for( size_t c= 0; c < n_loops; ++c )
+  {
+    auto const  bs_1a=   gen_rand();
+    auto        bs_1b=   bs_1a;
+    auto const  bs_1c=   ~bs_1a + one;
+    auto const  bs_2a=   Bitset2::complement2( bs_1a );
+    bs_1b.complement2();
+    assert( bs_1a + bs_2a == zero );
+    assert( bs_1a + bs_1b == zero );
+    assert( bs_1b == bs_1c );
+  } // for c
+} // test_complement2
 
 
 
@@ -819,11 +884,10 @@ main()
   std::cout << "sizeof( bitset2<64> )= " << sizeof( t1a<64> ) << '\n';
   std::cout << "sizeof( bitset2<65> )= " << sizeof( t1a<65> ) << '\n';
 
-  TESTMANY(test_hash)
-
-  TESTMNY(test_compare)
+  TESTMNY(test_complement2)
   TESTMNY(test_convert)
   TESTMNY(test_add)
+  TESTMNY(test_compare)
   TESTMNY(test_reverse)
   TESTMNY(test_find)
   TESTMNY(test_difference)
@@ -835,4 +899,5 @@ main()
   TESTMNY(test_shift)
   TESTMNY(test_rotate)
 
+  TESTMANY(test_hash)
 } // main

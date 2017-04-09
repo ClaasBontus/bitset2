@@ -15,6 +15,7 @@
 
 
 #include "bit_chars.hpp"
+#include "array_funcs.hpp"
 
 
 namespace Bitset2
