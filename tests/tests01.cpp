@@ -109,7 +109,7 @@ struct dummy_add
       else                                           crry= T(0);
       ret_val[c]= v;
     }
-    if( n_ull ) ret_val[n_ull-1] &= hgh_pattern;
+    if( n_ull > 0 ) ret_val[n_ull-1] &= hgh_pattern;
 
     return ret_val;
   } // add

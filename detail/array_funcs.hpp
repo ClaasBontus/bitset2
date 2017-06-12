@@ -123,6 +123,7 @@ namespace detail
       /// \brief Returns true if f returns true for each pair
       /// of elements in arr1 and arr2
       template<class F>
+      constexpr
       bool
       zip_fold_and( array_t const &arr1, array_t const &arr2,
                     F &f ) const noexcept(noexcept( f( base_t(0), base_t(0) ) ))
@@ -132,6 +133,7 @@ namespace detail
       /// \brief Returns true if f returns true for at least one pair
       /// of elements in arr1 and arr2
       template<class F>
+      constexpr
       bool
       zip_fold_or( array_t const &arr1, array_t const &arr2,
                    F &f ) const noexcept(noexcept( f( base_t(0), base_t(0) ) ))
@@ -239,6 +241,7 @@ namespace detail
 
 
       template<class F>
+      constexpr
       bool
       zip_fold_and_impl( array_t const &arr1, array_t const &arr2,
                          F      &f,
@@ -252,6 +255,7 @@ namespace detail
 
 
       template<class F>
+      constexpr
       bool
       zip_fold_or_impl( array_t const &arr1, array_t const &arr2,
                         F      &f,

@@ -29,7 +29,7 @@ allows control of the underlying data structure (see below).
 * Additional constexpr function `convert_to<n>` for converting an *m*-bit bitset2 into an *n*-bit bitset2.
 * Additional constexpr function `convert_to<n,T>` for converting an *m*-bit bitset2 into an *n*-bit bitset2 with `base_t=T`.
 * Member function `data()` gives read access to the underlying `array<base_t,N>`. Here element with index zero is the least significant word.
-* Additional functions `zip_fold_and` and `zip_fold_or`. See below for details.
+* Additional constexpr functions `zip_fold_and` and `zip_fold_or`. See below for details.
 
 ## Example
 ```.cpp
