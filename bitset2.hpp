@@ -108,9 +108,11 @@ public:
   constexpr
   bitset2( bitset2 && ) noexcept= default;
 
+  constexpr
   bitset2 &
   operator=( bitset2 const & ) noexcept= default;
 
+  constexpr
   bitset2 &
   operator=( bitset2 && ) noexcept= default;
 
@@ -178,6 +180,7 @@ public:
   operator[]( size_t bit ) noexcept
   { return reference( this, bit ); }
 
+  constexpr
   bitset2 &
   operator<<=( size_t n_shift ) noexcept
   {
@@ -185,6 +188,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   operator>>=( size_t n_shift ) noexcept
   {
@@ -192,6 +196,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   rotate_left( size_t n_rot ) noexcept
   {
@@ -199,6 +204,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   rotate_right( size_t n_rot ) noexcept
   {
@@ -207,6 +213,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   reverse() noexcept
   {
@@ -215,6 +222,7 @@ public:
   }
 
   /// Computes two's complement
+  constexpr
   bitset2 &
   complement2() noexcept
   {
@@ -222,6 +230,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   operator+=( bitset2 const &bs2 ) noexcept
   {
@@ -229,6 +238,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   operator++() noexcept
   {
@@ -236,6 +246,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2
   operator++(int) noexcept
   {
@@ -244,6 +255,7 @@ public:
     return tmp;
   }
 
+  constexpr
   bitset2 &
   operator--() noexcept
   {
@@ -251,6 +263,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2
   operator--(int) noexcept
   {
@@ -259,6 +272,7 @@ public:
     return tmp;
   }
 
+  constexpr
   bitset2 &
   operator|=( bitset2 const & v2 ) noexcept
   {
@@ -267,6 +281,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   operator&=( bitset2 const & v2 ) noexcept
   {
@@ -275,6 +290,7 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   operator^=( bitset2 const & v2 ) noexcept
   {
@@ -284,6 +300,7 @@ public:
   }
 
   /// Computes the set difference, i.e. *this &= ~v2
+  constexpr
   bitset2 &
   difference( bitset2 const & v2 ) noexcept
   {
@@ -292,18 +309,22 @@ public:
     return *this;
   }
 
+  constexpr
   bitset2 &
   set() noexcept
   { detail::bitset2_impl<N,T>::set(); return *this; }
 
+  constexpr
   bitset2 &
   set( size_t bit, bool value= true )
   { detail::bitset2_impl<N,T>::set( bit, value ); return *this; }
 
+  constexpr
   bitset2 &
   reset() noexcept
   { detail::bitset2_impl<N,T>::reset(); return *this; }
 
+  constexpr
   bitset2 &
   reset( size_t bit )
   {
@@ -313,75 +334,78 @@ public:
 
  /// \brief Sets the specified bit if value==true,
  /// clears it otherwise. Returns the previous state of the bit.
+ constexpr
  bool
  test_set( size_t bit, bool value= true )
  { return detail::bitset2_impl<N,T>::test_set( bit, value ); }
 
-  bitset2 &
-  flip() noexcept
-  { detail::bitset2_impl<N,T>::flip(); return *this; }
+ constexpr
+ bitset2 &
+ flip() noexcept
+ { detail::bitset2_impl<N,T>::flip(); return *this; }
 
-  bitset2 &
-  flip( size_t bit )
-  { detail::bitset2_impl<N,T>::flip( bit ); return *this; }
+ constexpr
+ bitset2 &
+ flip( size_t bit )
+ { detail::bitset2_impl<N,T>::flip( bit ); return *this; }
 
-  constexpr std::size_t size() const noexcept { return N; }
+ constexpr std::size_t size() const noexcept { return N; }
 
-  template<class CharT = char,
-           class Traits = std::char_traits<CharT>,
-           class Allocator = std::allocator<CharT> >
-  std::basic_string<CharT,Traits,Allocator>
-  to_string( CharT zero = CharT('0'), CharT one = CharT('1') ) const
-  {
-    std::basic_string<CharT,Traits,Allocator> ret_val;
-    ret_val.reserve( N );
-    for( size_t ct= N; ct > 0; )
-    {
-      --ct;
-      ret_val += this->operator[]( ct ) ? one : zero;
-    }
-    return ret_val;
-  } // to_string
+ template<class CharT = char,
+          class Traits = std::char_traits<CharT>,
+          class Allocator = std::allocator<CharT> >
+ std::basic_string<CharT,Traits,Allocator>
+ to_string( CharT zero = CharT('0'), CharT one = CharT('1') ) const
+ {
+   std::basic_string<CharT,Traits,Allocator> ret_val;
+   ret_val.reserve( N );
+   for( size_t ct= N; ct > 0; )
+   {
+     --ct;
+     ret_val += this->operator[]( ct ) ? one : zero;
+   }
+   return ret_val;
+ } // to_string
 
-  template<class CharT = char,
-           class Traits = std::char_traits<CharT>,
-           class Allocator = std::allocator<CharT>,
-           typename std::enable_if<base_t_n_bits % 4 == 0>::type* = nullptr >
-  std::basic_string<CharT,Traits,Allocator>
-  to_hex_string( hex_params<CharT,Traits,Allocator> const &params=
-                 hex_params<CharT,Traits,Allocator>{} ) const
-  {
-    using arr_acc=  detail::array_access<N,T>;
-    arr_acc         a_a;
-    constexpr auto  div_four= arr_acc::div_four;
-    constexpr auto  mod_four= arr_acc::mod_four;
-    constexpr auto  n_char= div_four + ( mod_four > 0 );
+ template<class CharT = char,
+          class Traits = std::char_traits<CharT>,
+          class Allocator = std::allocator<CharT>,
+          typename std::enable_if<base_t_n_bits % 4 == 0>::type* = nullptr >
+ std::basic_string<CharT,Traits,Allocator>
+ to_hex_string( hex_params<CharT,Traits,Allocator> const &params=
+                hex_params<CharT,Traits,Allocator>{} ) const
+ {
+   using arr_acc=  detail::array_access<N,T>;
+   arr_acc         a_a;
+   constexpr auto  div_four= arr_acc::div_four;
+   constexpr auto  mod_four= arr_acc::mod_four;
+   constexpr auto  n_char= div_four + ( mod_four > 0 );
 
-    auto const      zeroCh= params.zeroCh;
-    auto const      aCh=    params.aCh;
+   auto const      zeroCh= params.zeroCh;
+   auto const      aCh=    params.aCh;
 
-    std::basic_string<CharT,Traits,Allocator> ret_val;
-    ret_val.reserve( n_char + params.prefix.size() );
-    ret_val= params.prefix;
-    size_t ct= n_char;
-    if( !params.leadingZeroes )
-    {
-      for( ; ct > 0; --ct )
-      {
-        auto  const val= a_a.get_four_bits( this->data(), 4 * ct - 1 );
-        if( val != 0 ) break;
-      }
-    }
-    if( ct == 0 && params.nonEmpty ) ret_val += zeroCh;
-    for( ; ct > 0; --ct )
-    {
-      auto  const val= a_a.get_four_bits( this->data(), 4 * ct - 1 );
-      CharT const c=
-            ( val < 10 ) ? ( zeroCh + val ) : ( aCh + ( val - 10 ) );
-      ret_val += c;
-    }
-    return ret_val;
-  } // to_hex_string
+   std::basic_string<CharT,Traits,Allocator> ret_val;
+   ret_val.reserve( n_char + params.prefix.size() );
+   ret_val= params.prefix;
+   size_t ct= n_char;
+   if( !params.leadingZeroes )
+   {
+     for( ; ct > 0; --ct )
+     {
+       auto  const val= a_a.get_four_bits( this->data(), 4 * ct - 1 );
+       if( val != 0 ) break;
+     }
+   }
+   if( ct == 0 && params.nonEmpty ) ret_val += zeroCh;
+   for( ; ct > 0; --ct )
+   {
+     auto  const val= a_a.get_four_bits( this->data(), 4 * ct - 1 );
+     CharT const c=
+     ( val < 10 ) ? ( zeroCh + val ) : ( aCh + ( val - 10 ) );
+     ret_val += c;
+   }
+   return ret_val;
+ } // to_hex_string
 
 }; // class bitset2
 

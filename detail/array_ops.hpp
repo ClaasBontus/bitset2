@@ -65,6 +65,7 @@ namespace detail
     { return shift_right_impl( arr, std::make_index_sequence<n_array>() ); }
 
     /// Used for <<= operator. Separate implementation for better performance.
+    constexpr
     void
     shift_left_assgn( array_t &arr ) const noexcept
     {
@@ -87,6 +88,7 @@ namespace detail
     } // shift_left_assgn
 
     /// Used for >>= operator. Separate implementation for better performance.
+    constexpr
     void
     shift_right_assgn( array_t &arr ) const noexcept
     {
@@ -135,6 +137,7 @@ namespace detail
 
 
     /// Used for ++ operator.
+    constexpr
     void
     increment( array_t &arr ) const noexcept
     {
@@ -151,6 +154,7 @@ namespace detail
 
 
     /// Used for -- operator.
+    constexpr
     void
     decrement( array_t &arr ) const noexcept
     {

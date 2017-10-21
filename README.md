@@ -1,7 +1,12 @@
 # bitset2: bitset improved
 
+|Note|
+|----|
+|This version of bitset2 is for C++17. For C++14 checkout the corresponding [branch](https://github.com/ClaasBontus/bitset2/tree/cpp14).|
+
 Bitset2::bitset2 is a header only library. It provides the same functionality as [std::bitset](http://en.cppreference.com/w/cpp/utility/bitset) with the
 following extentions/changes.
+
 
 Focus was set on having as many functions
 implemented as [constexpr](http://en.cppreference.com/w/cpp/language/constexpr)
@@ -11,27 +16,29 @@ allows control of the underlying data structure (see below).
 * Additional constexpr constructor `bitset2( std::array<T,N> const & )`, where `T` needs not necessarily be equal to `base_t`. `T` has to be an unsigned integral type.
 * Conversion from and to `std::bitset`.
 * Operators implemented as constexpr are `~`, `==`, `!=`, `|`, `&`, `^`, `<<` (shift left), `>>` (shift right), `[]` (bit access).
+* Non-const operators implemented as constexpr are `<<=`, `>>=`, `|=`, `&=`, `^=`
 * Functions implemented as constexpr are `test`, `none`, `any`, `all`, `count`, `to_ulong`, `to_ullong`.
+* Non-const functions implemented as constexpr are `set`, `reset`, `flip`.
 * Additional constexpr operator `+` for adding two bitset2 objects.
-* Additional operators `++`, `--`, `+=`.
+* Additional constexpr operators `++`, `--`, `+=`.
 * Additional constexpr operators `<`, `>`, `<=`, `>=`.
 * Additional constexpr functions `rotate_left` and `rotate_right` for binary rotations.
-* Additional member functions `rotate_left` and `rotate_right`.
+* Additional constexpr member functions `rotate_left` and `rotate_right`.
 * Additional member function `to_hex_string()` (see below).
-* Additional member function `test_set( size_t bit, bool value= true )`, which sets or clears the specified bit and returns its previous state. Throws `out_of_range` if bit >= N.
+* Additional constexpr member function `test_set( size_t bit, bool value= true )`, which sets or clears the specified bit and returns its previous state. Throws `out_of_range` if bit >= N.
 * Additional constexpr function `difference`, which computes the set difference (`bs1 & ~bs2`) of two bitset2 objects.
-* Additional member function `difference`.
+* Additional constexpr member function `difference`.
 * Additional constexpr member functions `find_first()` and `find_next(size_t)` returning the index of the  first (next) bit set. Returning npos if all (remaining) bits are false.
 * Additional constexpr function `complement2(bs)` computing the [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement) (~bs +1).
-* Additional member function `complement2`.
+* Additional constexpr member function `complement2`.
 * Additional constexpr function `reverse`, which returns argument with bits reversed.
-* Additional member function `reverse`.
+* Additional constexpr member function `reverse`.
 * Additional constexpr function `convert_to<n>` for converting an *m*-bit bitset2 into an *n*-bit bitset2.
 * Additional constexpr function `convert_to<n,T>` for converting an *m*-bit bitset2 into an *n*-bit bitset2 with `base_t=T`.
-* Member function `data()` gives read access to the underlying `array<base_t,N>`. Here element with index zero is the least significant word.
+* Constexpr member function `data()` gives read access to the underlying `array<base_t,N>`. Here element with index zero is the least significant word.
 * Additional constexpr functions `zip_fold_and` and `zip_fold_or`. See below for details.
 
-## Example
+## Examples
 ```.cpp
 #include <iostream>
 #include <array>
@@ -72,6 +79,41 @@ int main()
   BS2<7>        b6{ "1010010" };
   b6.reverse();
   std::cout << b6 << "\n";    // 0100101
+}
+```
+
+The following example illustrates how
+[non-const constexpr](https://stackoverflow.com/q/43592862/3876684)
+operators and functions are useful for writing constexpr functions.
+It converts between [gray](https://en.wikipedia.org/wiki/Gray_code)
+and binary coding.
+
+```.cpp
+template<size_t N,class T>
+constexpr
+Bitset2::bitset2<N,T>
+binary_to_gray( Bitset2::bitset2<N,T> const &bs )
+{ return bs ^ (bs >> 1); }
+
+template<size_t N,class T>
+constexpr
+Bitset2::bitset2<N,T>
+gray_to_binary( Bitset2::bitset2<N,T> bs )
+{
+  Bitset2::bitset2<N,T>   mask= bs >> 1;
+  for( ; !mask.none(); mask >>= 1 )  bs ^= mask;
+  return bs;
+} // gray_to_binary
+
+int main()
+{
+  using ULLONG= unsigned long long;
+  constexpr std::array<ULLONG,2>  arr_01a{{ 0xFEFDFCFBFAF9F8F7ull, 1ull }};
+  constexpr Bitset2::bitset2<129> bs_01a{ arr_01a };
+  constexpr auto                  gray_01a= binary_to_gray( bs_01a );
+  constexpr auto                  bin_01a=  gray_to_binary( gray_01a );
+
+  static_assert( bs_01a == bin_01a, "" );
 }
 ```
 
@@ -146,8 +188,10 @@ For instance `is_subset_of` as proposed in [p0125r0](http://www.open-std.org/jtc
 can be implemented as follows.
 ```.cpp
 template<size_t N,class T>
+constexpr
 bool
-is_subset_of( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2 )
+is_subset_of( Bitset2::bitset2<N,T> const &bs1,
+              Bitset2::bitset2<N,T> const &bs2 ) noexcept
 {
   using base_t= T;
   return Bitset2::zip_fold_and( bs1, bs2,
@@ -156,9 +200,9 @@ is_subset_of( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2
                                   { return (v1 & ~v2) == 0; } );
 }
 
-Bitset2::bitset2<7>    b7_a( "1000101" );
-Bitset2::bitset2<7>    b7_b( "1010101" );
-assert( is_subset_of( b7_a, b7_b) );
+constexpr Bitset2::bitset2<7>    b7_a( 0b1000101ull );
+constexpr Bitset2::bitset2<7>    b7_b( 0b1010101ull );
+static_assert( is_subset_of( b7_a, b7_b), "" );
 ```
 
 Similarly an `unequal` function can be defined as
@@ -184,5 +228,5 @@ for( ;; ++c ) {}
 ```
 
 ## Caveats
-* bitset2 requires a C++14 compliant compiler.
-* Tested with gcc 4.9 and 5.3 and clang 3.7.
+* bitset2 requires a C++17 compliant compiler.
+* Tested with gcc 7 and clang 5.

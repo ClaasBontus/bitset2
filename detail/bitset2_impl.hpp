@@ -69,9 +69,11 @@ protected:
   constexpr
   bitset2_impl( bitset2_impl && ) noexcept= default;
 
+  constexpr
   bitset2_impl &
   operator=( bitset2_impl const & ) noexcept= default;
 
+  constexpr
   bitset2_impl &
   operator=( bitset2_impl && ) noexcept= default;
 
@@ -147,6 +149,7 @@ protected:
   //**********************************************************
 
 
+  constexpr
   array_t &
   get_data() noexcept
   { return m_value; }
@@ -161,6 +164,7 @@ protected:
   test_noexcept( size_t bit ) const noexcept
   { return m_value[bit / base_t_n_bits] & ( T(1) << ( bit % base_t_n_bits ) ); }
 
+  constexpr
   bitset2_impl &
   set( size_t bit, bool value= true )
   {
@@ -170,6 +174,7 @@ protected:
     return *this;
   } // set
 
+  constexpr
   bitset2_impl &
   set() noexcept
   {
@@ -182,6 +187,7 @@ protected:
     return *this;
   } // set
 
+  constexpr
   bitset2_impl &
   reset() noexcept
   {
@@ -189,6 +195,7 @@ protected:
     return *this;
   }
 
+  constexpr
   bool
   test_set( size_t bit, bool value= true )
   {
@@ -197,6 +204,7 @@ protected:
     return test_set_noexcept( bit, value );
   } // test_set
 
+  constexpr
   bitset2_impl &
   flip_noexcept( size_t bit ) noexcept
   {
@@ -204,6 +212,7 @@ protected:
     return *this;
   }
 
+  constexpr
   bitset2_impl &
   flip( size_t bit )
   {
@@ -212,6 +221,7 @@ protected:
     return flip_noexcept( bit );
   } // flip
 
+  constexpr
   bitset2_impl &
   flip() noexcept
   {
@@ -263,6 +273,7 @@ public:
             : operator[]( bit );
   }
 
+  constexpr
   void
   set_noexcept( size_t bit, bool value= true ) noexcept
   {
@@ -272,6 +283,7 @@ public:
                    &=  base_t(~( base_t(1) << ( bit % base_t_n_bits ) ));
   }
 
+  constexpr
   bool
   test_set_noexcept( size_t bit, bool value= true ) noexcept
   {
@@ -284,7 +296,7 @@ public:
     else        m_value[dv] &= ~pttrn;
 
     return ret_val;
-  }
+  } // test_set_noexcept
 
   constexpr
   bool

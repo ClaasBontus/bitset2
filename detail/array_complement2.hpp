@@ -124,6 +124,7 @@ namespace detail
                    : array_complement2_h<N,n_array-1,T>().comp2_h4( arr );
     }
 
+    constexpr
     void
     comp2_assgn( array_t &arr ) const noexcept
     {

@@ -17,24 +17,11 @@
 #include "bitset2.hpp"
 
 
-
-template<class T>
-constexpr
-bool
-and_not_zero( T v1, T v2 ) noexcept
-{ return (v1 & ~v2) == 0; }
-
-
-template<class T>
-constexpr
-bool
-uneq( T v1, T v2 ) noexcept
-{ return v1 != v2; }
-
-
 template<size_t N,class T>
+constexpr
 bool
-is_subset_of( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2 )
+is_subset_of( Bitset2::bitset2<N,T> const &bs1,
+              Bitset2::bitset2<N,T> const &bs2 ) noexcept
 {
   using base_t= T;
   return Bitset2::zip_fold_and( bs1, bs2,
@@ -46,32 +33,14 @@ is_subset_of( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2
 template<size_t N,class T>
 constexpr
 bool
-is_subset_of_ce( Bitset2::bitset2<N,T> const &bs1,
-                 Bitset2::bitset2<N,T> const &bs2 ) noexcept
-{
-  return Bitset2::zip_fold_and( bs1, bs2, and_not_zero<T> );
-} // is_subset_of_ce
-
-
-template<size_t N,class T>
-bool
-unequal( Bitset2::bitset2<N,T> const &bs1, Bitset2::bitset2<N,T> const &bs2 )
+unequal( Bitset2::bitset2<N,T> const &bs1,
+         Bitset2::bitset2<N,T> const &bs2 ) noexcept
 {
   using base_t= T;
   return Bitset2::zip_fold_or( bs1, bs2,
                                []( base_t v1, base_t v2 ) noexcept
                                  { return v1 != v2; } );
 } // unequal
-
-
-template<size_t N,class T>
-constexpr
-bool
-unequal_ce( Bitset2::bitset2<N,T> const &bs1,
-            Bitset2::bitset2<N,T> const &bs2 ) noexcept
-{
-  return Bitset2::zip_fold_or( bs1, bs2, uneq<T> );
-} // unequal_ce
 
 
 
@@ -403,6 +372,9 @@ int main()
   bitset2<7>    b7_d( "0110101" );
   bitset2<7>    b7_e( "1010101" );
 
+  constexpr bitset2<7>    b7_a_ce( 0b1010101ull );
+  constexpr bitset2<7>    b7_b_ce( 0b1000101ull );
+
   assert(  is_subset_of( b7_b, b7_a ) );
   assert( !is_subset_of( b7_c, b7_a ) );
   assert( !is_subset_of( b7_d, b7_a ) );
@@ -411,10 +383,8 @@ int main()
   assert(  unequal( b7_a, b7_b ) );
   assert( !unequal( b7_e, b7_a ) );
 
-  constexpr bitset2<7>    b7_a_ce( 0b1010101ull );
-  constexpr bitset2<7>    b7_b_ce( 0b1000101ull );
-  static_assert( is_subset_of_ce( b7_b_ce, b7_a_ce ) );
-  static_assert( unequal_ce( b7_a_ce, b7_b_ce ) );
+  static_assert( is_subset_of( b7_b_ce, b7_a_ce ), "" );
+  static_assert( unequal( b7_a_ce, b7_b_ce ), "" );
 
   assert( b7_b <  b7_a );
   assert( b7_c >  b7_a );

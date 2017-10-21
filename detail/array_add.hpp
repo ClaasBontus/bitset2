@@ -128,6 +128,7 @@ namespace detail
                    : array_add_h<N,n_array-1,T>().add_h3( arr1, arr2 ).second;
     }
 
+    constexpr
     void
     add_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
     {

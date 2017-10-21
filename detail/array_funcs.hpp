@@ -47,6 +47,7 @@ namespace detail
       }
 
       /// Used for |= operator. Separate implementation for better performance.
+      constexpr
       void
       bitwise_or_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::or_op, arr1, arr2 ); }
@@ -60,6 +61,7 @@ namespace detail
       }
 
       /// Used for &= operator. Separate implementation for better performance.
+      constexpr
       void
       bitwise_and_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::and_op, arr1, arr2 ); }
@@ -73,6 +75,7 @@ namespace detail
       }
 
       /// Used for ^= operator. Separate implementation for better performance.
+      constexpr
       void
       bitwise_xor_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::xor_op, arr1, arr2 ); }
@@ -88,6 +91,7 @@ namespace detail
 
       /// \brief Computes the set difference, i.e. arr1 & ~arr2.
       /// Separate implementation for better performance.
+      constexpr
       void
       bitwise_setdiff_assgn( array_t &arr1, array_t const &arr2 ) const noexcept
       { return bitwise_op_assgn_impl( op_type::sdiff_op, arr1, arr2 ); }
@@ -268,6 +272,7 @@ namespace detail
       }
 
 
+      constexpr
       void
       bitwise_op_assgn_impl( op_type opt,
                              array_t &arr1, array_t const &arr2 ) const noexcept
