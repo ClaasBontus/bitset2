@@ -881,6 +881,8 @@ main()
   std::cout << "sizeof( bitset2<8>  )= " << sizeof( t1a<8>  ) << '\n';
   std::cout << "sizeof( bitset2<16> )= " << sizeof( t1a<16> ) << '\n';
   std::cout << "sizeof( bitset2<32> )= " << sizeof( t1a<32> ) << '\n';
+  std::cout << "sizeof( bitset2<36> )= " << sizeof( t1a<36> ) << '\n';
+  std::cout << "sizeof( bitset2<36,uint8_t> )= " << sizeof( Bitset2::bitset2<36,uint8_t> ) << '\n';
   std::cout << "sizeof( bitset2<64> )= " << sizeof( t1a<64> ) << '\n';
   std::cout << "sizeof( bitset2<65> )= " << sizeof( t1a<65> ) << '\n';
 
