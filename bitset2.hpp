@@ -512,9 +512,6 @@ zip_fold_or( bitset2<N,T> const & bs1, bitset2<N,T> const & bs2,
 }
 
 
-} // namespace Bitset2
-
-
 
 
 /// Stream output
@@ -618,6 +615,9 @@ operator+( Bitset2::bitset2<N,T> const & bs1,
     Bitset2::bitset2<N,T>(
       Bitset2::detail::array_add<N,T>().add( bs1.data(), bs2.data() ) );
 }
+
+
+} // namespace Bitset2
 
 
 namespace std
