@@ -414,7 +414,38 @@ int main()
     << b16_a.to_hex_string() << '\n'                                    // 0a1f
     << b16_a.to_hex_string( hp1 )                                       // 0xA1F
     << '\n'
+#if __cplusplus >= 202002L
+    << b16_a.to_hex_string( {.aCh='A', .leadingZeroes=false, .prefix="0x"} ) // 0xA1F
+    << '\n'
+#endif
     << b16_b.to_hex_string() << '\n'                                    // 0000
     << b16_b.to_hex_string( hex_params<>{'0', 'a', false, false, "0X"}) // 0X
+    << '\n'
+#if __cplusplus >= 202002L
+    << b16_b.to_hex_string( {.leadingZeroes=false, .nonEmpty=false, .prefix="0X"} ) // 0X
+    << '\n'
+#endif
     << '\n';
+  
+#ifdef __SIZEOF_INT128__
+  std::cout << "\nEntering __int128 test\n";
+  using uint128 = unsigned __int128;
+  constexpr bitset2<128> b_128_1( uint128(-1) );
+  constexpr bitset2<127,uint128> b_128_2( uint128(-1) );
+  constexpr bitset2<126,uint8_t> b_128_3( uint128(-1) );
+  constexpr auto val_128_1 = b_128_1.to_u128();
+  constexpr auto val_128_2 = b_128_2.to_u128();
+  constexpr auto val_128_3 = b_128_3.to_u128();
+  std::cout << "   " << b_128_1
+    << "\n = " << b_128_1.to_hex_string() 
+    //<< "\n = " << val_128_1 
+    << '\n';
+  std::cout << "   " << b_128_2
+    << "\n = " << b_128_2.to_hex_string() << '\n';
+  std::cout << "   " << b_128_3
+    << "\n = " << b_128_3.to_hex_string() << '\n';
+  static_assert( b_128_1 == bitset2<128>(val_128_1) );
+  static_assert( b_128_2 == bitset2<127,uint128>(val_128_2) );
+  static_assert( b_128_3 == bitset2<126,uint8_t>(val_128_3) );
+#endif
 } // main

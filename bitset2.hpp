@@ -49,14 +49,14 @@ template<size_t N,
 
 template<size_t N,class T>
 class bitset2<N,T,
-              typename std::enable_if<   std::is_integral<T>::value
-                                      && std::is_unsigned<T>::value>::type>
+              typename std::enable_if<detail::is_unsgnd_int<T>::value>::type>
 : public detail::bitset2_impl<N,T>
 {
   enum : size_t { base_t_n_bits= detail::bitset2_impl<N,T>::base_t_n_bits };
 public:
   using array_t=  typename detail::bitset2_impl<N,T>::array_t;
   using ULLONG_t= typename detail::bitset2_impl<N,T>::ULLONG_t;
+  using LRGST_t=  typename detail::bitset2_impl<N,T>::LRGST_t;
   using base_t=   T;
   using detail::bitset2_impl<N,T>::n_array;
 
@@ -66,31 +66,42 @@ public:
   {
     friend class bitset2;
     reference() noexcept {}
+
+    constexpr
     reference( bitset2<N,T> *ptr, size_t bit ) noexcept
     : m_ptr( ptr )
     , m_bit( bit )
     {}
+
     bitset2<N,T> *m_ptr= nullptr;
     size_t       m_bit;
   public:
-    ~reference() noexcept {}
+    constexpr
     reference& operator=( bool x ) noexcept
     {
       m_ptr->set_noexcept( m_bit, x );
       return *this;
     }
+
+    constexpr
     reference& operator=( reference const & r ) noexcept
     {
       m_ptr->set_noexcept( m_bit, bool( r ) );
       return *this;
     }
+
+    constexpr
     reference& flip() noexcept
     {
       m_ptr->flip_noexcept( m_bit );
       return *this;
     }
+
+    constexpr
     operator bool() const noexcept
     { return m_ptr->test_noexcept(m_bit); }
+
+    constexpr
     bool operator~() const noexcept
     { return !bool(*this); }
   }; // class reference
@@ -123,7 +134,7 @@ public:
 
   explicit
   constexpr
-  bitset2( ULLONG_t v ) noexcept
+  bitset2( LRGST_t v ) noexcept
   : detail::bitset2_impl<N,T>( v )
   {}
 
@@ -176,6 +187,7 @@ public:
   operator[]( size_t bit ) const noexcept
   { return detail::bitset2_impl<N,T>::operator[]( bit ); }
 
+  constexpr
   reference
   operator[]( size_t bit ) noexcept
   { return reference( this, bit ); }
@@ -188,12 +200,60 @@ public:
     return *this;
   }
 
+  /// Shift left
+  friend
+  constexpr
+  bitset2
+  operator<<( bitset2 const & bs, size_t n_shift ) noexcept
+  {
+    return
+      Bitset2::bitset2<N,T>( Bitset2::detail::array_ops<N,T>( n_shift )
+                                                   .shift_left( bs.data() ) );
+  }
+
+  /// Stream output
+  template <class CharT, class Traits>
+  friend
+  std::basic_ostream<CharT, Traits> &
+  operator<<( std::basic_ostream<CharT, Traits> & os, bitset2 const & x )
+  {
+    for( size_t ct= N; ct > 0; )
+    {
+       --ct;
+       os << ( x[ct] ? "1" : "0" );
+    }
+    return os;
+  }
+
   constexpr
   bitset2 &
   operator>>=( size_t n_shift ) noexcept
   {
     detail::array_ops<N,T>( n_shift ).shift_right_assgn( this->get_data() );
     return *this;
+  }
+
+  /// Shift right
+  friend
+  constexpr
+  bitset2
+  operator>>( bitset2 const & bs, size_t n_shift ) noexcept
+  {
+    return
+      Bitset2::bitset2<N,T>( Bitset2::detail::array_ops<N,T>( n_shift )
+                                                   .shift_right( bs.data() ) );
+  }
+
+  /// Stream input
+  template <class CharT, class Traits>
+  friend
+  std::basic_istream<CharT, Traits> &
+  operator>>( std::basic_istream<CharT, Traits> & is, bitset2 & x )
+  {
+    std::bitset<N>  bs;
+    is >> bs;
+    x= Bitset2::bitset2<N,T>( bs );
+    return is;
   }
 
   constexpr
@@ -236,6 +296,16 @@ public:
   {
     detail::array_add<N,T>().add_assgn(this->get_data(), bs2.data());
     return *this;
+  }
+
+  friend
+  constexpr
+  bitset2
+  operator+( bitset2 const & bs1, bitset2 const & bs2 ) noexcept
+  {
+    return
+      Bitset2::bitset2<N,T>(
+        detail::array_add<N,T>().add( bs1.data(), bs2.data() ) );
   }
 
   constexpr
@@ -281,13 +351,35 @@ public:
     return *this;
   }
 
+  friend
+  constexpr
+  bitset2
+  operator|( bitset2 const & bs1, bitset2 const & bs2 ) noexcept
+  {
+    return
+      Bitset2::bitset2<N,T>(
+        detail::array_funcs<bitset2::n_array,T>()
+                  .bitwise_or(bs1.data(), bs2.data()) );
+  }
+
   constexpr
   bitset2 &
   operator&=( bitset2 const & v2 ) noexcept
   {
     detail::array_funcs<bitset2::n_array,T>()
-              .bitwise_and_assgn( this->get_data(), v2.data() );
+                  .bitwise_and_assgn( this->get_data(), v2.data() );
     return *this;
+  }
+
+  friend
+  constexpr
+  bitset2
+  operator&( bitset2 const & bs1, bitset2 const & bs2 ) noexcept
+  {
+    return
+      Bitset2::bitset2<N,T>(
+        detail::array_funcs<bitset2::n_array,T>()
+                  .bitwise_and( bs1.data(), bs2.data() ) );
   }
 
   constexpr
@@ -295,8 +387,19 @@ public:
   operator^=( bitset2 const & v2 ) noexcept
   {
     detail::array_funcs<bitset2::n_array,T>()
-              .bitwise_xor_assgn( this->get_data(), v2.data() );
+                  .bitwise_xor_assgn( this->get_data(), v2.data() );
     return *this;
+  }
+
+  friend
+  constexpr
+  bitset2
+  operator^( bitset2 const & bs1, bitset2 const & bs2 ) noexcept
+  {
+    return
+      Bitset2::bitset2<N,T>(
+        detail::array_funcs<bitset2::n_array,T>()
+                  .bitwise_xor( bs1.data(), bs2.data() ) );
   }
 
   /// Computes the set difference, i.e. *this &= ~v2
@@ -410,6 +513,7 @@ public:
 }; // class bitset2
 
 
+
 template<size_t N, class T>
 constexpr
 bitset2<N,T>
@@ -457,6 +561,19 @@ constexpr
 bitset2<N,T>
 complement2( bitset2<N,T> const & bs ) noexcept
 { return bitset2<N,T>( detail::array_complement2<N,T>().comp2(bs.data()) ); }
+
+
+/// Half the sum of bs1 and bs2. No overflow occurs.
+template<size_t N, class T>
+constexpr
+bitset2<N,T>
+midpoint( bitset2<N,T> const & bs1, bitset2<N,T> const & bs2,
+          bool round_down = false ) noexcept
+{
+  return bitset2<N,T>( detail::array_add<N,T>().midpoint(bs1.data(), bs2.data(),
+                                                         round_down) );
+}
+
 
 
 /// Converts an M-bit bitset2 to an N-bit bitset2.
@@ -511,110 +628,6 @@ zip_fold_or( bitset2<N,T> const & bs1, bitset2<N,T> const & bs2,
                                                                 bs2.data(), f );
 }
 
-
-
-
-/// Stream output
-template <class CharT, class Traits, size_t N,class T>
-std::basic_ostream<CharT, Traits>&
-operator<<( std::basic_ostream<CharT, Traits> & os,
-            Bitset2::bitset2<N,T> const & x )
-{
-  for( size_t ct= N; ct > 0; )
-  {
-     --ct;
-     os << ( x[ct] ? "1" : "0" );
-  }
-  return os;
-}
-
-/// Stream input
-template <class CharT, class Traits, size_t N,class T>
-std::basic_istream<CharT, Traits>&
-operator>>( std::basic_istream<CharT, Traits> & is,
-            Bitset2::bitset2<N,T> & x )
-{
-  std::bitset<N>  bs;
-  is >> bs;
-  x= Bitset2::bitset2<N,T>( bs );
-  return is;
-}
-
-
-
-/// Shift left
-template<size_t N,class T>
-constexpr
-Bitset2::bitset2<N,T>
-operator<<( Bitset2::bitset2<N,T> const & bs, size_t n_shift ) noexcept
-{
-  return
-    Bitset2::bitset2<N,T>( Bitset2::detail::array_ops<N,T>( n_shift )
-                                                 .shift_left( bs.data() ) );
-}
-
-
-/// Shift right
-template<size_t N,class T>
-constexpr
-Bitset2::bitset2<N,T>
-operator>>( Bitset2::bitset2<N,T> const & bs, size_t n_shift ) noexcept
-{
-  return
-    Bitset2::bitset2<N,T>( Bitset2::detail::array_ops<N,T>( n_shift )
-                                                 .shift_right( bs.data() ) );
-}
-
-
-template<size_t N,class T>
-constexpr
-Bitset2::bitset2<N,T>
-operator|( Bitset2::bitset2<N,T> const & bs1,
-           Bitset2::bitset2<N,T> const & bs2 ) noexcept
-{
-  return
-    Bitset2::bitset2<N,T>(
-      Bitset2::detail::array_funcs<Bitset2::bitset2<N,T>::n_array,T>()
-                                    .bitwise_or( bs1.data(), bs2.data() ) );
-}
-
-
-template<size_t N,class T>
-constexpr
-Bitset2::bitset2<N,T>
-operator&( Bitset2::bitset2<N,T> const & bs1,
-           Bitset2::bitset2<N,T> const & bs2 ) noexcept
-{
-  return
-    Bitset2::bitset2<N,T>(
-      Bitset2::detail::array_funcs<Bitset2::bitset2<N,T>::n_array,T>()
-                                  .bitwise_and( bs1.data(), bs2.data() ) );
-}
-
-
-template<size_t N,class T>
-constexpr
-Bitset2::bitset2<N,T>
-operator^( Bitset2::bitset2<N,T> const & bs1,
-           Bitset2::bitset2<N,T> const & bs2 ) noexcept
-{
-  return
-    Bitset2::bitset2<N,T>(
-      Bitset2::detail::array_funcs<Bitset2::bitset2<N,T>::n_array,T>()
-                                 .bitwise_xor( bs1.data(), bs2.data() ) );
-}
-
-
-template<size_t N,class T>
-constexpr
-Bitset2::bitset2<N,T>
-operator+( Bitset2::bitset2<N,T> const & bs1,
-           Bitset2::bitset2<N,T> const & bs2 ) noexcept
-{
-  return
-    Bitset2::bitset2<N,T>(
-      Bitset2::detail::array_add<N,T>().add( bs1.data(), bs2.data() ) );
-}
 
 
 } // namespace Bitset2

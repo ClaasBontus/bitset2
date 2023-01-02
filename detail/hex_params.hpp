@@ -27,23 +27,11 @@ struct hex_params
 {
   using str_t= std::basic_string<CharT,Traits,Allocator>;
 
-  hex_params( CharT         zero_ch=        CharT('0'),
-              CharT         a_ch=           CharT('a'),
-              bool          leading_zeroes= true,
-              bool          non_empty=      true,
-              str_t const & prfx=           str_t{} )
-  : zeroCh{ zero_ch }
-  , aCh{ a_ch }
-  , leadingZeroes{ leading_zeroes }
-  , nonEmpty{ non_empty }
-  , prefix{ prfx }
-  {}
-
   CharT        zeroCh=         CharT( '0' );
   CharT        aCh=            CharT( 'a' );
   bool         leadingZeroes=  true;
   bool         nonEmpty=       true;
-  str_t        prefix;
+  str_t        prefix=         str_t{};
 }; // struct hex_params
 
 

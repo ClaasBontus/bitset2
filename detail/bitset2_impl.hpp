@@ -18,6 +18,7 @@
 #include "ullong2array.hpp"
 #include "array2u_long_t.hpp"
 #include <bitset>
+#include <stdexcept>
 
 
 namespace Bitset2
@@ -37,6 +38,7 @@ public:
   using base_t=      T;
   using ULONG_t=     typename b_chars::ULONG_t;
   using ULLONG_t=    typename b_chars::ULLONG_t;
+  using LRGST_t=     typename b_chars::LRGST_t;
   using array_t=     typename h_types<T>::template array_t<n_array>;
 
 protected:
@@ -79,8 +81,8 @@ protected:
 
   explicit
   constexpr
-  bitset2_impl( ULLONG_t v ) noexcept
-  : m_value( ullong2array<N,T>()( v ) )
+  bitset2_impl( LRGST_t v ) noexcept
+  : m_value( lrgst2array<N,T>()( v ) )
   {}
 
   template<size_t n,class Tsrc>
@@ -94,7 +96,7 @@ protected:
   bitset2_impl( const std::bitset<N> &bs ) noexcept
   {
     if( N == 0 ) return;
-    if( ullong_n_bits <= base_t_n_bits && n_words == 1 )
+    if( ullong_n_bits >= base_t_n_bits && n_words == 1 )
     {
       m_value[0]= bs.to_ullong();
       return;
@@ -263,6 +265,20 @@ public:
                                            "to unsigned long long" )
               : a2l()( m_value );
   } // to_ullong
+  
+#ifdef __SIZEOF_INT128__
+  constexpr
+  LRGST_t
+  to_u128() const
+  {
+    using a2l= array2u_long_t<N,T,LRGST_t>;
+    return  ( N == 0 ) ? LRGST_t(0)
+            : a2l().check_overflow( m_value )
+              ? throw std::overflow_error( "Cannot convert bitset2 "
+                                           "to unsigned __int128" )
+              : a2l()( m_value );
+  } // to_u128
+#endif
 
   constexpr
   bool
@@ -317,6 +333,12 @@ public:
   size_t
   count() const noexcept
   { return detail::array_funcs<n_array,T>().count( m_value ); }
+  
+  /// True if exactly one bit set.
+  constexpr
+  bool
+  has_single_bit() const noexcept
+  { return detail::array_funcs<n_array,T>().has_single_bit( m_value ); }
 
   /// \brief Returns index of first (least significant) bit set.
   /// Returns npos if all bits are zero.
@@ -324,7 +346,34 @@ public:
   size_t
   find_first() const noexcept
   {
-    return detail::array_funcs<n_array,T>().idx_lsb_set(m_value, m_value[0], 0);
+    return detail::array_funcs<n_array,T>().idx_lsb_set(m_value, m_value[0], 0, base_t(2));
+  }
+
+  /// \brief Returns index of first (least significant) bit unset.
+  /// Returns npos if all bits are set.
+  constexpr
+  size_t
+  find_first_zero() const noexcept
+  {
+    return detail::array_funcs<n_array,T>().idx_lsb_set(m_value, ~m_value[0], 0, hgh_bit_pattern);
+  }
+  
+  /// \brief Returns index of last (most significant) bit set.
+  /// Returns npos if all bits are zero.
+  constexpr
+  size_t
+  find_last() const noexcept
+  {
+    return detail::array_funcs<n_array,T>().idx_msb_set(m_value, base_t(2));
+  }
+  
+  /// \brief Returns index of last (most significant) bit unset.
+  /// Returns npos if all bits are set.
+  constexpr
+  size_t
+  find_last_zero() const noexcept
+  {
+    return detail::array_funcs<n_array,T>().idx_msb_set(m_value, hgh_bit_pattern);
   }
 
   /// \brief Returns index of next (> idx) bit set.
@@ -334,16 +383,38 @@ public:
   size_t
   find_next( size_t idx ) const
   {
+    size_t const arr_idx = (idx+1) / base_t_n_bits;
+    size_t const idx_mod = (idx+1) % base_t_n_bits;
     return idx >= N
       ? throw std::out_of_range( "bitset2: find_next index out of range" )
       : idx + 1 == N
         ? npos
         : detail::array_funcs<n_array,T>()
             .idx_lsb_set( m_value,
-                          base_t( m_value[(idx+1) / base_t_n_bits]
-                            & ce_left_shift(T(~T(0)),(idx+1) % base_t_n_bits) ),
-                          (idx+1) / base_t_n_bits );
-  }
+                          base_t( m_value[arr_idx] & ce_left_shift(T(~T(0)),idx_mod) ),
+                          arr_idx,
+                          base_t(2) );
+  } // find_next
+
+  /// \brief Returns index of next (> idx) bit unset.
+  /// Returns npos if no more bits unset.
+  /// Throws out_of_range if idx >= N.
+  constexpr
+  size_t
+  find_next_zero( size_t idx ) const
+  {
+    size_t const arr_idx = (idx+1) / base_t_n_bits;
+    size_t const idx_mod = (idx+1) % base_t_n_bits;
+    return idx >= N
+      ? throw std::out_of_range( "bitset2: find_next index out of range" )
+      : idx + 1 == N
+        ? npos
+        : detail::array_funcs<n_array,T>()
+            .idx_lsb_set( m_value,
+                          base_t( ~(m_value[arr_idx]) & ce_left_shift(T(~T(0)),idx_mod) ),
+                          arr_idx,
+                          hgh_bit_pattern );
+  } // find_next_zero
 
   constexpr
   bool
@@ -380,7 +451,7 @@ public:
   {
     using b_t= std::bitset<N>;
     if( N == 0 ) return b_t{};
-    if( n_words == 1 ) return b_t( to_ullong() );
+    if( n_words == 1 && base_t_n_bits <= ullong_n_bits ) return b_t( to_ullong() );
 
     b_t  ret_val;
     for( size_t ct= 0; ct < N; ++ct ) ret_val[ct]= operator[](ct);

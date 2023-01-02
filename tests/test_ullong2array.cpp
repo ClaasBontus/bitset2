@@ -22,13 +22,19 @@ int main()
 {
   using ULLONG= unsigned long long;
 
-  auto const all_set= ~ULLONG(0);
+  auto const all_set_ull= ~ULLONG(0);
+  
+#ifdef __SIZEOF_INT128__
+  auto const all_set= (unsigned __int128)(-1);
+#else
+  auto const all_set= all_set_ull;
+#endif
 
   using namespace Bitset2::detail;
 
   using a2l_65ll= Bitset2::detail::array2u_long_t<65,ULLONG,ULLONG>;
 
-  auto const a1= ullong2array<18,uint32_t>()( all_set );
+  auto const a1= lrgst2array<18,uint32_t>()( all_set );
   std::array<uint32_t,1> const expt1{{ uint32_t((1ull << 18) - 1) }};
   size_t ct= 0;
   for( auto v: a1 )
@@ -40,7 +46,7 @@ int main()
   assert( ct == 1 );
 
 
-  auto const a2= ullong2array<34,uint32_t>()( all_set );
+  auto const a2= lrgst2array<34,uint32_t>()( all_set );
   std::array<uint32_t,2> const
        expt2{{ uint32_t(~uint32_t(0)), uint32_t((1ull << 2) - 1) }};
   ct= 0;
@@ -53,7 +59,7 @@ int main()
   assert( ct == 2 );
 
 
-  auto const a3= ullong2array<18,uint16_t>()( all_set );
+  auto const a3= lrgst2array<18,uint16_t>()( all_set );
   std::array<uint32_t,2> const
        expt3{{ uint16_t(~uint16_t(0)), uint16_t((1ull << 2) - 1) }};
   ct= 0;
@@ -66,7 +72,7 @@ int main()
   assert( ct == 2 );
 
 
-  auto const a4= ullong2array<18,uint8_t>()( all_set );
+  auto const a4= lrgst2array<18,uint8_t>()( all_set );
   std::array<uint8_t,3> const
     expt4{{uint8_t(~uint8_t(0)),uint8_t(~uint8_t(0)),uint8_t((1ull << 2) - 1)}};
   ct= 0;
@@ -79,7 +85,7 @@ int main()
   assert( ct == 3 );
 
 
-  auto const a5= ullong2array<18,uint64_t>()( all_set );
+  auto const a5= lrgst2array<18,uint64_t>()( all_set );
   std::array<uint64_t,1> const expt5{{ uint64_t((1ull << 18) - 1) }};
   ct= 0;
   for( auto v: a5 )
@@ -91,7 +97,7 @@ int main()
   assert( ct == 1 );
 
 
-  auto const a6= ullong2array<34,uint64_t>()( all_set );
+  auto const a6= lrgst2array<34,uint64_t>()( all_set );
   std::array<uint64_t,1> const expt6{{ uint64_t((1ull << 34) - 1) }};
   ct= 0;
   for( auto v: a6 )
@@ -103,9 +109,14 @@ int main()
   assert( ct == 1 );
 
 
-  auto const a7= ullong2array<66,uint64_t>()( all_set );
+  auto const a7= lrgst2array<66,uint64_t>()( all_set );
+#ifdef __SIZEOF_INT128__
+  std::array<uint64_t,2> const
+       expt7{{ uint64_t(~uint64_t(0)), uint64_t(3) }};
+#else
   std::array<uint64_t,2> const
        expt7{{ uint64_t(~uint64_t(0)), uint64_t(0) }};
+#endif
   ct= 0;
   for( auto v: a7 )
   {
@@ -116,7 +127,7 @@ int main()
   assert( ct == 2 );
   
 
-  a2l_65ll::array_t  arr1{{ all_set, 0ull }};
+  a2l_65ll::array_t  arr1{{ all_set_ull, 0ull }};
 
   std::cout << '\n' << a2l_65ll::i_pttrn << '\n';
   std::cout << a2l_65ll::h_pttrn << '\n';

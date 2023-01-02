@@ -42,6 +42,34 @@ private:
 
 
 
+#ifdef __SIZEOF_INT128__
+template<>
+class gen_randoms<unsigned __int128>
+{
+public:
+  using T = unsigned __int128;
+
+  gen_randoms( T max_val )
+  : m_max_lft( uint64_t(max_val >> 64) )
+  , m_max_rgt( uint64_t(max_val & uint64_t(-1)) )
+  , m_generator( std::random_device{}() )
+  , m_distri_lft( 0, m_max_lft )
+  , m_distri_rgt( 0, m_max_rgt )
+  {}
+  //
+  T
+  operator()()
+  { return ( T( m_distri_lft(m_generator) ) << 64 ) + T( m_distri_rgt(m_generator) ); }
+  //
+private:
+  uint64_t                                  m_max_lft, m_max_rgt;
+  std::mt19937                              m_generator;
+  std::uniform_int_distribution<uint64_t>   m_distri_lft;
+  std::uniform_int_distribution<uint64_t>   m_distri_rgt;
+}; // class gen_randoms
+#endif
+
+
 
 /// Generate N-bit sized bitset2 randomly
 template<size_t N,class T>

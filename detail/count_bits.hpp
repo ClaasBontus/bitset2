@@ -16,6 +16,10 @@
 
 #include "h_types.hpp"
 
+#if __cplusplus >= 202002L
+# include <bit>
+#endif
+
 
 namespace Bitset2
 {
@@ -29,6 +33,12 @@ namespace detail
   size_t
   count_bits( T val, size_t count= 0 ) noexcept
   {
+#ifdef __cpp_lib_bitops
+# ifdef __SIZEOF_INT128__
+    if constexpr( !std::is_same_v<T,unsigned __int128> )
+# endif
+      return std::popcount(val);
+#endif
     return
       ( val == T(0) )
                ? count

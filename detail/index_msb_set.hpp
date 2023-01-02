@@ -11,8 +11,8 @@
 //
 
 
-#ifndef BITSET2_INDEX_LSB_SET_CB_HPP
-#define BITSET2_INDEX_LSB_SET_CB_HPP
+#ifndef BITSET2_INDEX_MSB_SET_CB_HPP
+#define BITSET2_INDEX_MSB_SET_CB_HPP
 
 
 #include <limits>
@@ -41,13 +41,13 @@ namespace detail
 
 /// https://graphics.stanford.edu/~seander/bithacks.html#ZerosOnRightBinSearch
 template<class T>
-struct index_lsb_set
+struct index_msb_set
 {
   enum : size_t { npos=   std::numeric_limits<size_t>::max()
                 , n_bits= sizeof(T) * CHAR_BIT };
 
   constexpr
-  index_lsb_set() noexcept
+  index_msb_set() noexcept
   {
     static_assert( ( n_bits & ( n_bits - 1 ) ) == 0,
                    "Number of bits in data type is not a power of 2" );
@@ -57,23 +57,26 @@ struct index_lsb_set
   size_t
   impl( T val ) const noexcept
   {
-    size_t c = 1;
-    size_t sh_rgt = n_bits >> 1;
-    T pttrn = T( T(~T(0)) >> sh_rgt );
+    T const fnl_bit = T( T(1) << (n_bits-1) );
+    if( T(val & fnl_bit) == fnl_bit ) return n_bits - 1;
     
-    while( sh_rgt >= 2 )
+    size_t c = 1;
+    size_t sh_lft = n_bits >> 1;
+    T pttrn = T( T(~T(0)) << sh_lft );
+    
+    while( sh_lft >= 2 )
     {
         if( T( val & pttrn ) == T(0) ) 
         {
-            c += sh_rgt;
-            val >>= sh_rgt;
+            c += sh_lft;
+            val <<= sh_lft;
         }
-        sh_rgt >>= 1;
-        pttrn >>= sh_rgt;
+        sh_lft >>= 1;
+        pttrn <<= sh_lft;
     }
-    if( T(val & T(1) ) == T(1) ) --c;
+    if( T(val & fnl_bit ) == fnl_bit ) --c;
       
-    return c;
+    return n_bits - 1 - c;
   } // impl
   
 #ifdef __cpp_lib_bitops
@@ -85,11 +88,11 @@ struct index_lsb_set
     if constexpr( std::is_same_v<T,unsigned __int128> ) return impl(val);
     else
 # endif
-    return std::countr_zero(val);
+    return n_bits - 1 - std::countl_zero(val);
   }
 #endif
 
-  /// \brief Returns index of first (least significant) bit set in val.
+  /// \brief Returns index of last (most significant) bit set in val.
   /// Returns npos if all bits are zero.
   constexpr
   size_t
@@ -99,7 +102,7 @@ struct index_lsb_set
     if constexpr( CMPLRCOUNTR ) return impl2(val);
     return impl(val);
   }
-}; // struct index_lsb_set
+}; // struct index_msb_set
 
 
 
@@ -109,4 +112,5 @@ struct index_lsb_set
 
 #undef CMPLRCOUNTR
 
-#endif // BITSET2_INDEX_LSB_SET_CB_HPP
+
+#endif // BITSET2_INDEX_MSB_SET_CB_HPP

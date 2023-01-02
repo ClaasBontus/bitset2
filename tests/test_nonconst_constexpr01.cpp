@@ -100,6 +100,41 @@ ce_sme_fncs( Bitset2::bitset2<N,T> const &bs1 )
 } // ce_sme_fncs
 
 
+template<size_t N,class T>
+constexpr
+Bitset2::bitset2<N,T>
+ce_evry_scnd()
+{
+  Bitset2::bitset2<N,T> ret_val;
+
+  for( size_t c= 0; c < N; c += 2 )
+  {
+    auto ref= ret_val[c];
+    ref= true;
+  }
+
+  return ret_val;
+} // ce_evry_scnd
+
+
+template<size_t N,class T>
+constexpr
+Bitset2::bitset2<N,T>
+ce_evry_scnd2()
+{
+  Bitset2::bitset2<N,T> ret_val{{1}};
+  auto const            one= ret_val;
+
+  for( size_t c= 0; c < N; c += 2 )
+  {
+    ret_val <<= 2;
+    ret_val |= one;
+  }
+
+  return ret_val;
+} // ce_evry_scnd2
+
+
 int main()
 {
   using ULLONG= unsigned long long;
@@ -150,6 +185,11 @@ int main()
   constexpr auto                  rr4_1= ce_shftequal( b_from_s_arr01a, 4, 4 );
   constexpr auto                  smf_a= ce_sme_fncs( b_from_s_arr01a );
 
+  constexpr auto                  e2_1=  ce_evry_scnd<1025,ULLONG>();
+  constexpr auto                  e2_2=  ce_evry_scnd2<1025,ULLONG>();
+  constexpr auto                  e2_3=  ce_evry_scnd<256,ULLONG>();
+  constexpr auto                  e2_4=  ce_evry_scnd2<256,ULLONG>();
+
   static_assert( add_01a_b == inc_01a_5, "" );
   static_assert( add_01a_b == inc_01b_5, "" );
   static_assert( sub_01a_b == dec_01c_5, "" );
@@ -164,6 +204,8 @@ int main()
   static_assert( rol4_01a   == rl4_1, "" );
   static_assert( ror4_01a   == rr4_1, "" );
   static_assert( xor42_01a  == smf_a, "" );
+  static_assert( e2_1 == e2_2, "" );
+  static_assert( e2_3 == e2_4, "" );
 
   std::cout << inc_01a_5 << '\n' << inc_01b_5.to_hex_string() << "\n";
   std::cout << sub_01a_b << '\n' << dec_01c_5.to_hex_string() << "\n";

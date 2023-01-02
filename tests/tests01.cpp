@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <chrono>
 
 #define TESTMANY(F) \
     F <7  >(); \
@@ -52,12 +53,23 @@
     F <256,T>(S); \
     F <257,T>(S);
 
+#ifdef __SIZEOF_INT128__
+# define USE128(F) TESTMANY2(F,unsigned __int128,"uint128")
+#else
+# define USE128(F)
+#endif
 
-#define TESTMNY(F) \
+#define TESTMNY(F) { \
+    auto const t1 = std::chrono::high_resolution_clock::now(); \
     TESTMANY2(F,uint8_t, "uint8_t" ) \
     TESTMANY2(F,uint16_t,"uint16_t") \
     TESTMANY2(F,uint32_t,"uint32_t") \
-    TESTMANY2(F,unsigned long long,"U_L_LONG")
+    TESTMANY2(F,unsigned long long,"U_L_LONG") \
+    USE128(F) \
+    auto const t2 = std::chrono::high_resolution_clock::now(); \
+    const std::chrono::duration<double> dt21 = t2 -t1; \
+    std::cout << "Total: " << dt21.count() << " seconds\n\n"; \
+    }
 
 
 template<size_t N,class T=unsigned long long>
@@ -138,6 +150,25 @@ dummy_reverse( t1<N,T> const & bs )
 }
 
 
+template<size_t N,class T>
+t1<N,T>
+dummy_average( t1<N,T> const & bs1, t1<N,T> const & bs2, bool round_down )
+{
+  t1<N+1,T> tmp= t1<N+1,T>(bs1.data());
+  tmp += t1<N+1,T>(bs2.data());
+  tmp >>= 1;
+
+  if(!round_down)
+  {
+    T v1 = bs1.data()[0];
+    T v2 = bs2.data()[0];
+    if( (v1 & 1) && ((~v2) & 1) ) ++tmp;
+  }
+
+  return t1<N,T>(tmp.data());
+}
+
+
 
 template<size_t N,class T>
 void
@@ -197,11 +228,16 @@ test_set_count_size( char const * type_str )
   t1<N,T> const      empty1;
   constexpr t1<N,T>  ce_empty1;
   constexpr t1<N,T>  ce_full1= ~ce_empty1;
+  constexpr t1<N,T>  one{1};
   assert( empty1.size() == N );
   static_assert( ce_empty1.size() == N, "" );
   static_assert( ce_full1.count() == N, "" );
   static_assert( !ce_empty1.test( N - 3 ), "" );
   static_assert( ce_full1.test( N - 2 ), "" );
+
+  static_assert( !ce_empty1.has_single_bit() );
+  static_assert( !ce_full1.has_single_bit() );
+  static_assert( one.has_single_bit() );
 
   gen_random_bitset2<N,T>  gen_rand;
   for( size_t c= 0; c < n_loops; ++c )
@@ -213,6 +249,10 @@ test_set_count_size( char const * type_str )
     {
       if( bs1.test( b_c ) ) ++n_set1;
       if( bs1[b_c] )        ++n_set2;
+
+      t1<N,T>   bs3;
+      bs3.set(b_c);
+      assert( bs3.has_single_bit() );
     }
 
     if( verbose ) std::cout << bs1.to_hex_string() << "\t" << n_set1
@@ -225,6 +265,8 @@ test_set_count_size( char const * type_str )
     assert( n_set1 == cnt1 );
     assert( n_set1 == n_set2 );
     assert( cnt2   == N - cnt1 );
+
+    assert( !bs1.has_single_bit() || cnt1 == 1 );
   } // for c
 } // test_set_count_size
 
@@ -379,6 +421,40 @@ test_shift( char const * type_str )
 
 template<size_t N,class T>
 void
+test_midpoint( const char * type_str )
+{
+  std::cout << "Entering test_midpoint N= " << N << " type= " << type_str << "\n";
+
+  gen_random_bitset2<N,T>  gen_rand;
+
+  constexpr t1<N,T>        ce_one{{ T(1) }};
+  constexpr t1<N,T>        ce_empty;
+  constexpr t1<N,T>        ce_all= ~ce_empty;
+  constexpr t1<N,T>        ce_all_but_one= ~ce_one;
+  constexpr auto           ce_all_twice= ce_all + ce_all;
+  static_assert( Bitset2::midpoint( ce_one, ce_one ) == ce_one, "" );
+  static_assert( Bitset2::midpoint( ce_empty, ce_empty ) == ce_empty, "" );
+  static_assert( Bitset2::midpoint( ce_all, ce_all ) == ce_all, "" );
+  static_assert( Bitset2::midpoint( ce_all_but_one, ce_all_but_one ) == ce_all_but_one, "" );
+  static_assert( Bitset2::midpoint( ce_all_twice, ce_all_twice ) == ce_all_twice, "" );
+  static_assert( Bitset2::midpoint( ce_all, ce_all_but_one ) == ce_all, "" );
+  static_assert( Bitset2::midpoint( ce_all, ce_all_but_one, true ) == ce_all_but_one, "" );
+
+  for( size_t c= 0; c < n_loops; ++c )
+  {
+    auto const  bs1=  gen_rand();
+    auto const  bs2=  gen_rand();
+
+    assert( Bitset2::midpoint(bs1, bs2)       == dummy_average(bs1, bs2, false) );
+    assert( Bitset2::midpoint(bs1, bs2, true) == dummy_average(bs1, bs2, true) );
+  } // for c
+} // test_midpoint
+
+
+
+
+template<size_t N,class T>
+void
 test_add( const char * type_str )
 {
   std::cout << "Entering test_add N= " << N << " type= " << type_str << "\n";
@@ -454,7 +530,7 @@ test_difference( char const * type_str )
   constexpr std::array<T,2>  ce_arr2{{ T(6), T(1) }};
   constexpr t1<74,T>  ce_bs1( ce_arr1 );
   constexpr t1<74,T>  ce_bs2( ce_arr2 );
-  constexpr auto      ce_diff1= Bitset2::difference( ce_bs1, ce_bs2 );
+  constexpr auto      ce_diff1= difference( ce_bs1, ce_bs2 );
   constexpr auto      ce_ref1=  ce_bs1 & ~ce_bs2;
   static_assert( ce_diff1 == ce_ref1, "" );
 
@@ -466,7 +542,7 @@ test_difference( char const * type_str )
     auto const  bs2=  gen_rand();
     auto        bs3=  bs1;
 
-    auto const  d1=   Bitset2::difference( bs1, bs2 );
+    auto const  d1=   difference( bs1, bs2 );
     auto const  d2=   bs1 & ~bs2;
     bs3.difference( bs2 );
 
@@ -519,9 +595,15 @@ test_find( char const * type_str )
   std::cout << "Entering test_find N= " << N << " type= " << type_str << "\n";
 
   constexpr  t1<N,T>  ce_bs1( 12ull );
+  constexpr  auto     ce_bs2 = ~ce_bs1;
   static_assert( ce_bs1.find_first() == 2, "" );
+  static_assert( ce_bs2.find_first_zero() == 2, "" );
+  static_assert( ce_bs1.find_last()  == 3, "" );
+  static_assert( ce_bs2.find_last_zero()  == 3, "" );
   static_assert( ce_bs1.find_next( 2 ) == 3, "" );
+  static_assert( ce_bs2.find_next_zero( 2 ) == 3, "" );
   static_assert( ce_bs1.find_next( 3 ) == t1<N,T>::npos, "" );
+  static_assert( ce_bs2.find_next_zero( 3 ) == t1<N,T>::npos, "" );
 
   gen_random_bitset2<N,T>  gen_rand;
 
@@ -530,10 +612,16 @@ test_find( char const * type_str )
     auto bs1= t1<N,T>();
 
     assert( bs1.find_first() == (Bitset2::bitset2<N,T>::npos) );
+    assert( bs1.find_first_zero() == 0 );
+    assert( bs1.find_last()  == (Bitset2::bitset2<N,T>::npos) );
+    assert( bs1.find_last_zero() == N-1 );
     assert( bs1.find_next(0) == (Bitset2::bitset2<N,T>::npos) );
+    assert( bs1.find_next_zero(0) == 1 );
 
     bs1[c]= true;
     assert( bs1.find_first() == c );
+    assert( bs1.find_last()  == c );
+    if( c+1 < N ) assert( bs1.find_next_zero(c) == c+1 );
     if( c > 0 )
     {
       assert( bs1.find_next( c - 1 ) == c );
@@ -541,9 +629,19 @@ test_find( char const * type_str )
       bs1[0]= true;
       bs1[N-1]= true;
       assert( bs1.find_first() == 0 );
+      assert( bs1.find_last()  == N-1 );
+      if( c+2 < N )      assert( bs1.find_last_zero() == N-2 );
+      else if( c+1 < N ) assert( bs1.find_last_zero() == N-3 );
+      if( c   > 1 ) assert( bs1.find_first_zero() == 1 );
+      else          assert( bs1.find_first_zero() == 2 );
       auto idx= bs1.find_next( c );
-      if( c < N - 1 ) assert( idx == N - 1 );
-      else            assert( idx == (Bitset2::bitset2<N,T>::npos) );
+      auto idx2 = bs1.find_next_zero(c);
+      if( c + 1 < N ) 
+      {
+        assert( idx == N - 1 );
+        if(c+2 < N) assert( idx2 == c+1 );
+      }
+      else assert( idx == (Bitset2::bitset2<N,T>::npos) );
 
       for( size_t b= 0; b < c; ++b ) bs1[b]= true;
       idx= bs1.find_next( c );
@@ -556,7 +654,11 @@ test_find( char const * type_str )
   {
     auto const  bs1=  gen_rand();
     auto const  lst=  idx_lst( bs1 );
-    if( lst.empty() ) assert( bs1.find_first() == (Bitset2::bitset2<N,T>::npos) );
+    if( lst.empty() )
+    {
+        assert( bs1.find_first() == (Bitset2::bitset2<N,T>::npos) );
+        assert( bs1.find_last()  == (Bitset2::bitset2<N,T>::npos) );
+    }
     else
     {
       auto b_it= lst.begin();
@@ -568,6 +670,7 @@ test_find( char const * type_str )
         idx= bs1.find_next( idx );
         assert( idx == *b_it );
       }
+      assert( idx == bs1.find_last() );
       idx= bs1.find_next( idx );
       assert( idx == (Bitset2::bitset2<N,T>::npos) );
     }
@@ -886,20 +989,31 @@ main()
   std::cout << "sizeof( bitset2<64> )= " << sizeof( t1a<64> ) << '\n';
   std::cout << "sizeof( bitset2<65> )= " << sizeof( t1a<65> ) << '\n';
 
-  TESTMNY(test_complement2)
-  TESTMNY(test_convert)
-  TESTMNY(test_add)
-  TESTMNY(test_compare)
-  TESTMNY(test_reverse)
-  TESTMNY(test_find)
-  TESTMNY(test_difference)
-  TESTMNY(test_any_all_none)
-  TESTMNY(test_set_count_size)
-  TESTMNY(test_set)
-  TESTMNY(test_not)
-  TESTMNY(test_bitwise_ops)
-  TESTMNY(test_shift)
+#ifdef __SIZEOF_INT128__
+  gen_random_bitset2<128,unsigned __int128>  gen_rand;
+  auto const bs128_1 = gen_rand();
+  constexpr auto bs128_allOne = t1a<128>( (unsigned __int128)(-1) );
+  std::cout << "   " << bs128_1
+    << "\n = " << bs128_1.to_hex_string() << '\n';
+  std::cout << "   " << bs128_allOne
+    << "\n = " << bs128_allOne.to_hex_string() << '\n';
+#endif
+
   TESTMNY(test_rotate)
+  TESTMNY(test_shift)
+  TESTMNY(test_find)
+  TESTMNY(test_set_count_size)
+  TESTMNY(test_difference)
+  TESTMNY(test_bitwise_ops)
+  TESTMNY(test_midpoint)
+  TESTMNY(test_add)
+  TESTMNY(test_any_all_none)
+  TESTMNY(test_set)
+  TESTMNY(test_reverse)
+  TESTMNY(test_complement2)
+  TESTMNY(test_not)
+  TESTMNY(test_convert)
+  TESTMNY(test_compare)
 
   TESTMANY(test_hash)
 } // main

@@ -14,6 +14,7 @@ as possible. Moreover a second template parameter (with appropriate default)
 allows control of the underlying data structure (see below).
 * Copy and move constructors are specified constexpr.
 * Additional constexpr constructor `bitset2( std::array<T,N> const & )`, where `T` needs not necessarily be equal to `base_t`. `T` has to be an unsigned integral type.
+* Additional constexpr constructor `bitset2( unsigned __int128 )` if supported by compiler.
 * Conversion from and to `std::bitset`.
 * Operators implemented as constexpr are `~`, `==`, `!=`, `|`, `&`, `^`, `<<` (shift left), `>>` (shift right), `[]` (bit access).
 * Non-const operators implemented as constexpr are `<<=`, `>>=`, `|=`, `&=`, `^=`
@@ -25,14 +26,18 @@ allows control of the underlying data structure (see below).
 * Additional constexpr functions `rotate_left` and `rotate_right` for binary rotations.
 * Additional constexpr member functions `rotate_left` and `rotate_right`.
 * Additional member function `to_hex_string()` (see below).
+* Additional constexpr member function `to_u128()` (if supported by compiler) returning an `unsigned __int128` value. Throws `std::overflow_error` if value doesn't fit into 128 bits.
 * Additional constexpr member function `test_set( size_t bit, bool value= true )`, which sets or clears the specified bit and returns its previous state. Throws `out_of_range` if bit >= N.
 * Additional constexpr function `difference`, which computes the set difference (`bs1 & ~bs2`) of two bitset2 objects.
 * Additional constexpr member function `difference`.
-* Additional constexpr member functions `find_first()` and `find_next(size_t)` returning the index of the  first (next) bit set. Returning npos if all (remaining) bits are false.
+* Additional constexpr member functions `find_first()`, `find_last` and `find_next(size_t)` returning the index of the first, last or next bit set. Returning npos if all (remaining) bits are false.
+* Additional constexpr member functions `find_first_zero()`, `find_last_zero` and `find_next_zero(size_t)` returning the index of the first, last or next bit unset. Returning npos if all (remaining) bits are true.
+* Additional constexpr member function `has_single_bit` returning true if exactly one bit set.
 * Additional constexpr function `complement2(bs)` computing the [two's complement](https://en.wikipedia.org/wiki/Two%27s_complement) (~bs +1).
 * Additional constexpr member function `complement2`.
 * Additional constexpr function `reverse`, which returns argument with bits reversed.
 * Additional constexpr member function `reverse`.
+* Additional constexpr function `midpoint(bs1,bs2,bool round_down=false)` returns half the sum of bs1 and bs2 without overflow. Like [std::midpoint](https://en.cppreference.com/w/cpp/numeric/midpoint) rounds towards `bs1` if `round_down==false`.
 * Additional constexpr function `convert_to<n>` for converting an *m*-bit bitset2 into an *n*-bit bitset2.
 * Additional constexpr function `convert_to<n,T>` for converting an *m*-bit bitset2 into an *n*-bit bitset2 with `base_t=T`.
 * Constexpr member function `data()` gives read access to the underlying `array<base_t,N>`. Here element with index zero is the least significant word.
@@ -124,7 +129,8 @@ template< size_t N, class T >
 class bitset2;
 ```
 `N` is the number of bits and `T` has to be an unsigned
-[integral type](http://en.cppreference.com/w/cpp/types/is_integral). Data
+[integral type](http://en.cppreference.com/w/cpp/types/is_integral).
+`T` can be `unsigned __int128` if supported by compiler. Data
 represented by `bitset2` objects are stored in elements of type
 `std::array<T,n_array>`.
 
@@ -164,8 +170,12 @@ std::cout
   << b16_a.to_hex_string() << '\n'                                    // 0a1f
   << b16_a.to_hex_string( hex_params<>{'0', 'A', false, true, "0x"})  // 0xA1F
   << '\n'
+  << b16_a.to_hex_string( {.aCh='A', .leadingZeroes=false, .prefix="0x"} ) // Same with C++-20
+  << '\n'
   << b16_b.to_hex_string() << '\n'                                    // 0000
   << b16_b.to_hex_string( hex_params<>{'0', 'a', false, false, "0X"}) // 0X
+  << '\n'
+  << b16_b.to_hex_string( {.leadingZeroes=false, .nonEmpty=false, .prefix="0X"} ) // Same with C++-20
   << '\n';
 ```
 
@@ -229,4 +239,4 @@ for( ;; ++c ) {}
 
 ## Caveats
 * bitset2 requires a C++17 compliant compiler.
-* Tested with gcc 7 and clang 5.
+* Tested with gcc 12 and clang 15.

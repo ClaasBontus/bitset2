@@ -17,13 +17,38 @@
 #include "h_types.hpp"
 #include "count_bits.hpp"
 #include "index_lsb_set.hpp"
+#include "index_msb_set.hpp"
 #include <utility>
 
+#if __cplusplus >= 202002L
+# include <bit>
+# ifdef __cpp_lib_int_pow2
+#  define CMPLRPOW2
+# endif
+#endif
 
 namespace Bitset2
 {
 namespace detail
 {
+#ifdef CMPLRPOW2
+  template<class T>
+  constexpr
+  bool loc_test_single_bit( T val )
+  { return std::has_single_bit( val ); }
+  
+# ifdef __SIZEOF_INT128__
+  template<>
+  constexpr
+  bool loc_test_single_bit( unsigned __int128 val )
+  { return (val & (val - 1)) == 0; }
+# endif
+#else
+  template<class T>
+  constexpr
+  bool loc_test_single_bit( T val )
+  { return (val & T(val - T(1))) == T(0); }
+#endif
 
   template<size_t n_array,class T>
   struct array_funcs
@@ -107,9 +132,27 @@ namespace detail
       size_t
       count( array_t const &arr ) const noexcept
       {
-        return
-          sum_impl( count_impl( arr, std::make_index_sequence<n_array>() ) );
+        size_t ct = 0;
+        for( size_t i= 0; i < n_array; ++i ) ct += count_bits(arr[i]);
+        return ct;
       }
+      
+      
+      constexpr
+      bool
+      has_single_bit( array_t const &arr ) const noexcept
+      {
+          size_t ct = 0;
+          for( size_t i= 0; i < n_array; ++i )
+          {
+              base_t x = arr[i];
+              if( x == T(0) ) continue;
+              if( loc_test_single_bit(x) ) ++ct;
+              else return false;
+              if( ct > 1 ) return false;
+          }
+          return ct == 1;
+      } // has_single_bit
 
 
       constexpr
@@ -298,41 +341,55 @@ namespace detail
       constexpr
       base_t
       h_bitwise_op( size_t idx, op_type opt,
-                     array_t const &arr1, array_t const &arr2 ) const noexcept
+                    array_t const &arr1, array_t const &arr2 ) const noexcept
       {
-        return   (   opt == op_type::or_op )  ? ( arr1[idx] | arr2[idx] )
-               : ( ( opt == op_type::and_op ) ? ( arr1[idx] & arr2[idx] )
-                   : ( opt == op_type::xor_op ) ? ( arr1[idx] ^ arr2[idx] )
-                                                : ( arr1[idx] & ~arr2[idx] ) );
-      }
-
-      /// Count bits in each element of arr
-      template<size_t ... S>
-      constexpr
-      std::array<size_t, n_array>
-      count_impl( array_t const &arr, std::index_sequence<S...> ) const noexcept
-      { return {{ count_bits( arr[S] )... }};  }
-
-
-      /// Sum over all elements in vals
-      template<class T1>
-      constexpr
-      T1
-      sum_impl( std::array<T1, n_array> const &vals,
-                size_t ct= n_array - 1 ) const noexcept
-      { return vals[ct] + ( ( ct == 0 ) ? T1(0) : sum_impl( vals, ct - 1 ) ); }
+            switch( opt )
+            {
+                case op_type::or_op:  return arr1[idx] | arr2[idx];
+                case op_type::and_op: return arr1[idx] & arr2[idx];
+                case op_type::xor_op: return arr1[idx] ^ arr2[idx];
+                default: return arr1[idx] & base_t(~arr2[idx]);      // set difference
+            } // switch
+      } // h_bitwise_op
 
 
       constexpr
       size_t
-      idx_lsb_set( array_t const &arr, base_t v, size_t idx ) const noexcept
+      idx_lsb_set( array_t const &arr, base_t v, size_t idx, base_t hgh_bit_pttrn ) const noexcept
       {
-        return
-          v == base_t(0)
-            ? ( idx + 1 == n_array ? npos
-                                   : idx_lsb_set( arr, arr[idx+1], idx + 1 ) )
-            : idx * base_t_n_bits + index_lsb_set<base_t>()( v );
-      }
+        bool const complement = hgh_bit_pttrn != base_t(2);
+        if( complement && idx + 1 == n_array )  v &= hgh_bit_pttrn;
+        while( idx < n_array )
+        {
+          if( v != 0 ) return idx * base_t_n_bits + index_lsb_set<base_t>()( v );
+          if(++idx < n_array) 
+          {
+            v = arr[idx];
+            if( complement ) {
+              v = ~v;
+              if( idx + 1 == n_array ) v &= hgh_bit_pttrn;
+            }
+          }
+        }
+        return npos;
+      } // idx_lsb_set
+
+
+      constexpr
+      size_t
+      idx_msb_set( array_t const &arr, base_t hgh_bit_pttrn ) const noexcept
+      {
+          bool const complement = hgh_bit_pttrn != base_t(2);
+          index_msb_set<base_t>  msb_hlpr;
+          for( size_t i = n_array; i-- > 0; )
+          {
+              base_t val = complement ? ~(arr[i]) : arr[i];
+              if( complement && i + 1 == n_array ) val &= hgh_bit_pttrn;
+              size_t idx = msb_hlpr( val );
+              if( idx != npos ) return i * base_t_n_bits + idx;
+          }
+          return npos;
+      } // idx_msb_set
 
   }; // struct array_funcs
 
@@ -342,5 +399,6 @@ namespace detail
 
 
 
+#undef CMPLRPOW2
 
 #endif // BITSET2_ARRAY_FUNCS_CB_HPP

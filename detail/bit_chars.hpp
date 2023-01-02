@@ -27,12 +27,14 @@ namespace detail
       using h_t=      h_types<T>;
       using ULONG_t=  typename h_t::ULONG_t;
       using ULLONG_t= typename h_t::ULLONG_t;
+      using LRGST_t=  typename h_t::LRGST_t;
       using base_t=   T;
       //
       enum : size_t
       { n_bits=         N
       , ulong_n_bits=   h_t::ulong_n_bits                ///< #bits in ULONG_t
       , ullong_n_bits=  h_t::ullong_n_bits               ///< #bits in ULLONG_t
+      , lrgst_n_bist=   h_t::lrgst_n_bist                ///< #bits in LRGST_t
       , base_t_n_bits=  h_t::base_t_n_bits               ///< #bits in T
       , div_val=        n_bits / base_t_n_bits
       , mod_val=        n_bits % base_t_n_bits
